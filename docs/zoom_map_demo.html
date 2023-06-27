@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <title>Leaflet Map Zoom Demo</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <style>
+      #mapid { height: 100vh; width: 100%; }
+  </style>
+</head>
+<body>
+<div id="mapid"></div>
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script>
+const map = L.map('mapid').setView([35.681236, 139.767125], 18); // Coordinates for Tokyo Station
+// 地理院地図
+// @see https://maps.gsi.go.jp/development/ichiran.html
+L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png', {
+  maxZoom: 24, // 地図としてユーザーにズームを許可する限界値に maxZoom を設定
+  maxNativeZoom: 18 // 提供されるズームレベルの max に maxNativeZoom を設定
+}).addTo(map);
+</script>
+</body>
+</html>
