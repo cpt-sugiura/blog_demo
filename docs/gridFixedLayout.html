@@ -1,0 +1,56 @@
+<html lang="ja">
+<head>
+    <title>demo</title>
+    <meta charset="utf-8">
+    <style>
+        /* grid を使ってヘッダーとフッターはそれぞれに合った高さにし */
+        /* コンテンツは残りの高さ全てを使うようにする */
+        .page {
+            height: 100%;
+            width: 100%;
+            display: grid;
+            grid-template-rows: fit-content(100%) 1fr fit-content(100%);
+        }
+        /* 内部要素が大きい場合はスクロールが発生するようにする */
+        .page > .content {
+            overflow: auto;
+        }
+        /*スクロールするコンテンツの中身。*/
+        /*スクロールを発生させるために高さと幅を大きくとり*/
+        /*スクロールしていることを分かりやすくするためにグラデーションをつける*/
+        .big-item {
+            height: 3000px;
+            width: 3000px;
+            background: -moz-linear-gradient(135deg, #000, #fff);
+            background: -ms-linear-gradient(135deg, #000, #fff);
+            background: -o-linear-gradient(135deg, #000, #fff);
+            background: -webkit-linear-gradient(135deg, #000, #fff);
+        }
+        /* デモ用にヘッダー、フッター、コンテンツの境界を分かりやすくするためのデザイン */
+        .page {
+            gap: 1em;
+        }
+        header,
+        footer {
+            padding: 1em;
+            background: #aaa;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+    </style>
+</head>
+<body>
+<div class="page">
+    <header>
+        ここはヘッダーです
+    </header>
+    <div class="content">
+        <div class="big-item"></div>
+    </div>
+    <footer>
+        ここはフッターです
+    </footer>
+</div>
+</body>
+</html>
