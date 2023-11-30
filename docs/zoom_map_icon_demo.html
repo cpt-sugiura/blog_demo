@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <title>Leaflet Map Zoom Demo</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <style>
+      #mapid { height: 100vh; width: 100%; }
+  </style>
+</head>
+<body>
+<div id="mapid"></div>
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script>
+const map = L.map('mapid').setView([35.681236, 139.767125], 2); // Coordinates for Tokyo Station
+// 地理院地図
+// @see https://maps.gsi.go.jp/development/ichiran.html
+L.tileLayer('assets/zoom_map_icon_demo/wordpress_icon_{z}_{x}_{y}.png', {
+  maxZoom: 24,
+  minNativeZoom: 0, // nativeZoomを0,0とすることで常に 0_0_0 のタイルが呼ばれるようにする
+  maxNativeZoom: 0,
+}).addTo(map);
+</script>
+</body>
+</html>
