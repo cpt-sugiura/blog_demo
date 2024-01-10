@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Frameset Example</title>
+    <meta charset="utf-8">
+    <script>
+    function getBodyElList() {
+        // bodyEl は HTMLFrameSetElement か HTMLBodyElement のどちらか
+        const bodyEl = document.body;
+        return bodyEl instanceof HTMLBodyElement
+            // HTMLBodyElement ならば、そのまま配列に入れて返す
+            ? [bodyEl]
+            // HTMLFrameSetElement ならば、その子である各 frame から HTMLBodyElement を取得する
+            : Array.from(window.frames).map((f) => f.document.body);
+    }
+    const initialize = (e) => {
+        // e.targetはloadイベントでもDOMContentLoadedイベントでもHTMLDocumentである
+        const rootEl = e.target.body;
+        // rootElの最下部に赤背景の文字列を表示
+        const divEl = document.createElement('div');
+        divEl.textContent = 'ここが最下部';
+        divEl.style.position = 'fixed';
+        divEl.style.bottom = '0';
+        divEl.style.left = '0';
+        divEl.style.backgroundColor = 'red';
+        rootEl.appendChild(divEl);
+    };
+    document.addEventListener('DOMContentLoaded',()=>{
+        Array.from(window.frames).forEach(f => f.addEventListener('load', initialize));
+    })
+    document.addEventListener('DOMContentLoaded',initialize)
+    </script>
+</head>
+<frameset rows="50%,50%">
+    <frame src="frame1.html" name="frame1">
+    <frame src="frame2.html" name="frame2">
+</frameset>
+</html>
