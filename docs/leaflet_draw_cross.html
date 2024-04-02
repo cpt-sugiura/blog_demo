@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <title>Leafletでバツ印を描く</title>
+  <meta charset="utf-8"/>
+  <link rel="stylesheet" href="assets/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="assets/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+      html, body, #map {
+          height: 100%;
+          width: 100%;
+          margin: 0;
+      }
+  </style>
+</head>
+<body>
+<div id="map"></div>
+<script>
+/**
+ * バツ印を描画
+ * @param map {L.Map} 地図
+ * @param start {L.LatLng} ドラッグ開始地点
+ * @param end {L.LatLng} ドラッグ終了地点
+ * @returns {L.LayerGroup} バツ印を描画したレイヤーグループ
+ */
+const drawCross = (map, start, end) => {
+  // 画面上でバツ印にするためには地球の形状が計算の邪魔になるので、計算は全てピクセル座標系で行います
+  // 地理座標からピクセル座標への変換
+  const startPoint = map.latLngToContainerPoint(start);
+  const endPoint = map.latLngToContainerPoint(end);
+  // 中点を計算
+  const midpoint = L.point((startPoint.x + endPoint.x) / 2, (startPoint.y + endPoint.y) / 2);
+  // ドラッグ開始点から終了点までの垂直方向の差分の計算
+  const dx = endPoint.x - startPoint.x;
+  const dy = endPoint.y - startPoint.y;
+  // 中点からドラッグ開始点から終了点までの線分に垂直かつ半分の長さの線分を計算
+  const lineBOnContainerPoint = [
+    L.point(midpoint.x - dy / 2, midpoint.y + dx / 2),
+    L.point(midpoint.x + dy / 2, midpoint.y - dx / 2),
+  ];
+  // ピクセル座標から地理座標へ変換
+  const lineB = [
+    map.containerPointToLatLng(lineBOnContainerPoint[0]),
+    map.containerPointToLatLng(lineBOnContainerPoint[1]),
+  ];
+  // バツ印を描画
+  return L.layerGroup([
+    L.polyline([start, end], {color: 'red', weight: 3}),
+    L.polyline(lineB, {color: 'red', weight: 3}),
+  ]).addTo(map);
+};
+
+
+/**
+ * マウスダウン時のハンドラを作成。このマウスダウンを起点にバツ印を描画する
+ * @param map {L.Map} 地図
+ * @param onCreated {Function} バツ印が地図上に作成された際に呼び出される関数
+ */
+const makeMouseDownHandler = (map, onCreated) => (e) => {
+  // ドラッグ開始地点を記録
+  const startPoint = e.latlng;
+  // ドラッグ中は地図の移動を無効化
+  // マウス移動時にバツ印を描画するので、地図の移動を無効化しないと描画ができない
+  map.dragging.disable();
+  // マウス移動時にバツ印し続けるために描画したバツ印を記録して消してを繰り返す
+  let drawingCross = null;
+
+  function onMouseMove(e) {
+    if (drawingCross) {
+      map.removeLayer(drawingCross);
+    }
+    drawingCross = drawCross(map, startPoint, e.latlng);
+  }
+
+  map.on('mousemove', onMouseMove);
+  // ドラッグ終了地点でバツ印を描画し、地図の移動を有効化
+  map.once('mouseup', (e) => {
+    map.dragging.enable();
+    map.off('mousemove', onMouseMove);
+    const cross = drawCross(map, startPoint, e.latlng);
+    onCreated && onCreated(cross);
+  });
+};
+
+/**
+ * バツ印描画ハンドラを追加
+ * @param map {L.Map} 地図
+ * @param onCreated {Function} バツ印が地図上に作成された際に呼び出される関数
+ * @returns {Function} バツ印描画ハンドラを削除する関数
+ */
+const addDrawCrossHandler = (map, onCreated) => {
+  // マウスダウン時のハンドラを作成して登録
+  const mouseDownHandler = makeMouseDownHandler(map, onCreated);
+  map.on('mousedown', mouseDownHandler);
+  // バツ印描画ハンドラを削除する関数を返す
+  // この関数を使う際にハンドラの登録を一度だけするつくり以外にも、ハンドラの登録と削除を繰り返すつくりでもいいようにするために用意
+  return () => map.off('mousedown', mouseDownHandler);
+};
+
+
+/*****************************
+ * 使用例
+ *****************************/
+// 地図を作成
+const map = L.map('map').setView([35.681236, 139.767125], 10);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>',
+}).addTo(map);
+// バツ印描画ハンドラを追加
+addDrawCrossHandler(map, (cross) => {
+  console.log('バツ印が作成されました')
+  console.log(cross);
+});
+</script>
+</body>
+</html>
