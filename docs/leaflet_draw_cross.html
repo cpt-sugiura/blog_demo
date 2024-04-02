@@ -21,9 +21,10 @@
  * @param map {L.Map} 地図
  * @param start {L.LatLng} ドラッグ開始地点
  * @param end {L.LatLng} ドラッグ終了地点
+ * @param options {PolylineOptions} バツ印をのオプション (色や太さなど)
  * @returns {L.LayerGroup} バツ印を描画したレイヤーグループ
  */
-const drawCross = (map, start, end) => {
+const drawCross = (map, start, end, options) => {
   // 画面上でバツ印にするためには地球の形状が計算の邪魔になるので、計算は全てピクセル座標系で行います
   // 地理座標からピクセル座標への変換
   const startPoint = map.latLngToContainerPoint(start);
@@ -44,19 +45,16 @@ const drawCross = (map, start, end) => {
     map.containerPointToLatLng(lineBOnContainerPoint[1]),
   ];
   // バツ印を描画
-  return L.layerGroup([
-    L.polyline([start, end], {color: 'red', weight: 3}),
-    L.polyline(lineB, {color: 'red', weight: 3}),
-  ]).addTo(map);
+  return L.layerGroup([L.polyline([start, end], options), L.polyline(lineB, options)]).addTo(map);
 };
-
 
 /**
  * マウスダウン時のハンドラを作成。このマウスダウンを起点にバツ印を描画する
  * @param map {L.Map} 地図
- * @param onCreated {Function} バツ印が地図上に作成された際に呼び出される関数
+ * @param crossOptions {PolylineOptions} バツ印のオプション (色や太さなど)
+ * @param onCreated {Function} バツ印が地図上に作成された際に呼び出す関数
  */
-const makeMouseDownHandler = (map, onCreated) => (e) => {
+const makeMouseDownHandler = (map, crossOptions, onCreated) => (e) => {
   // ドラッグ開始地点を記録
   const startPoint = e.latlng;
   // ドラッグ中は地図の移動を無効化
@@ -69,7 +67,7 @@ const makeMouseDownHandler = (map, onCreated) => (e) => {
     if (drawingCross) {
       map.removeLayer(drawingCross);
     }
-    drawingCross = drawCross(map, startPoint, e.latlng);
+    drawingCross = drawCross(map, startPoint, e.latlng, crossOptions);
   }
 
   map.on('mousemove', onMouseMove);
@@ -77,7 +75,7 @@ const makeMouseDownHandler = (map, onCreated) => (e) => {
   map.once('mouseup', (e) => {
     map.dragging.enable();
     map.off('mousemove', onMouseMove);
-    const cross = drawCross(map, startPoint, e.latlng);
+    const cross = drawCross(map, startPoint, e.latlng, crossOptions);
     onCreated && onCreated(cross);
   });
 };
@@ -85,15 +83,13 @@ const makeMouseDownHandler = (map, onCreated) => (e) => {
 /**
  * バツ印描画ハンドラを追加
  * @param map {L.Map} 地図
- * @param onCreated {Function} バツ印が地図上に作成された際に呼び出される関数
+ * @param options {PolylineOptions} バツ印のオプション (色や太さなど)
+ * @param onCreated {Function} バツ印が地図上に作成された際に呼び出す関数
  * @returns {Function} バツ印描画ハンドラを削除する関数
  */
-const addDrawCrossHandler = (map, onCreated) => {
-  // マウスダウン時のハンドラを作成して登録
-  const mouseDownHandler = makeMouseDownHandler(map, onCreated);
+const addDrawCrossHandler = (map, options, onCreated) => {
+  const mouseDownHandler = makeMouseDownHandler(map, options, onCreated);
   map.on('mousedown', mouseDownHandler);
-  // バツ印描画ハンドラを削除する関数を返す
-  // この関数を使う際にハンドラの登録を一度だけするつくり以外にも、ハンドラの登録と削除を繰り返すつくりでもいいようにするために用意
   return () => map.off('mousedown', mouseDownHandler);
 };
 
@@ -107,10 +103,14 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>',
 }).addTo(map);
 // バツ印描画ハンドラを追加
-addDrawCrossHandler(map, (cross) => {
-  console.log('バツ印が作成されました')
-  console.log(cross);
-});
+addDrawCrossHandler(
+  map,
+  {color: 'red', weight: 8},
+  (cross) => {
+    console.log('バツ印が作成されました')
+    console.log(cross);
+  }
+);
 </script>
 </body>
 </html>
