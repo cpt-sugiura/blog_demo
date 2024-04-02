@@ -17,10 +17,10 @@
 <div id="map"></div>
 <script>
 /**
- * バツ印を描画
+ * バツ印を描画。バツ印はstartからendまでの線分とその線分の中点を通る直交した同じ長さの線分で描画されます
  * @param map {L.Map} 地図
- * @param start {L.LatLng} ドラッグ開始地点
- * @param end {L.LatLng} ドラッグ終了地点
+ * @param start {L.LatLng} バツ印の片方の線の開始地点
+ * @param end {L.LatLng} バツ印の片方の線の終了地点
  * @param options {PolylineOptions} バツ印をのオプション (色や太さなど)
  * @returns {L.LayerGroup} バツ印を描画したレイヤーグループ
  */
@@ -35,6 +35,7 @@ const drawCross = (map, start, end, options) => {
   const dx = endPoint.x - startPoint.x;
   const dy = endPoint.y - startPoint.y;
   // 中点からドラッグ開始点から終了点までの線分に垂直かつ半分の長さの線分を計算
+  // dx, dyを入れ替えてそれぞれの方向に伸ばすことで元の線分を90度回転させる
   const lineBOnContainerPoint = [
     L.point(midpoint.x - dy / 2, midpoint.y + dx / 2),
     L.point(midpoint.x + dy / 2, midpoint.y - dx / 2),
