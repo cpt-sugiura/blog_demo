@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>ポップアップ中のアンカーリンクのデモ</title>
+
+  <style>
+      body {
+          margin: 0;
+          height: 200vh;
+          overflow-y: scroll;
+          position: relative;
+          background-color: rgba(0, 0, 0, 0.4);
+      }
+
+      .popup {
+          position: absolute;
+          left: 50%;
+          top: 10%;
+          transform: translateX(-50%);
+          width: 50%;
+          height: 30em;
+          overflow: auto;
+          background-color: #fefefe;
+          padding: 20px;
+          border: 1px solid #888;
+          box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      .section {
+          margin-top: 20px;
+      }
+
+  </style>
+</head>
+<body>
+<div id="popup" class="popup">
+  <h1>ポップアップコンテンツ</h1>
+  <ul>
+    <li><a href="#section1">セクション 1</a></li>
+    <li><a href="#section2">セクション 2</a></li>
+    <li><a href="#section3">セクション 3</a></li>
+  </ul>
+  <div class="section" id="section1"><h2>セクション 1</h2>
+    <p>ここはセクション 1 の内容です。</p>
+    <p>ここはセクション 1 の内容です。</p>
+    <p>ここはセクション 1 の内容です。</p></div>
+  <div class="section" id="section2"><h2>セクション 2</h2>
+    <p>ここはセクション 2 の内容です。</p>
+    <p>ここはセクション 2 の内容です。</p>
+    <p>ここはセクション 2 の内容です。</p></div>
+  <div class="section" id="section3"><h2>セクション 3</h2>
+    <p>ここはセクション 3 の内容です。</p>
+    <p>ここはセクション 3 の内容です。</p>
+    <p>ここはセクション 3 の内容です。</p></div>
+</div>
+</body>
+</html>

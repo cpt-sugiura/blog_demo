@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>ポップアップ中のアンカーリンクのデモ</title>
+
+  <style>
+      body {
+          margin: 0;
+          height: 200vh;
+          overflow-y: scroll;
+          position: relative;
+          background-color: rgba(0, 0, 0, 0.4);
+      }
+
+      .popup {
+          position: absolute;
+          left: 50%;
+          top: 10%;
+          transform: translateX(-50%);
+          width: 50%;
+          height: 30em;
+          overflow: auto;
+          background-color: #fefefe;
+          padding: 20px;
+          border: 1px solid #888;
+          box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      .section {
+          margin-top: 20px;
+      }
+
+  </style>
+  <script>
+  document.addEventListener('DOMContentLoaded', () => {
+    setupPopupHashLinkScrolling('#popup', '#popup');
+  });
+  /**
+   * ポップアップ内のハッシュリンクをクリックした際に、指定された要素へスクロールするイベント追加する関数です。
+   * 処理に必要な各要素が存在しない場合はエラーメッセージがコンソールに表示されます。
+   * @param {string} popupElSelector - ポップアップ要素のセレクタ
+   * @param {string} scrollElSelector - スクロールが発生している要素のセレクタ
+   */
+  function setupPopupHashLinkScrolling(popupElSelector, scrollElSelector) {
+    // ポップアップ要素の取得
+    const popupEl = document.querySelector(popupElSelector);
+    if (!popupEl) {
+      console.error('ポップアップの要素が見つかりませんでした');
+      return;
+    }
+    // スクロールしたい要素
+    const scrollTgEl = document.querySelector(scrollElSelector);
+    if (!scrollTgEl) {
+      console.error('スクロール対象の要素が見つかりませんでした');
+      return;
+    }
+    // ポップアップにスクロール用のイベントリスナー追加
+    popupEl.addEventListener('click', scrollAction);
+
+    function scrollAction(e) {
+      // ポップアップ要素の中のハッシュリンクがクリックされた時だけ処理する
+      if (e.target.tagName !== 'A' || !e.target.hash) {
+        return;
+      }
+      e.preventDefault(); // リンクのデフォルト動作をキャンセル
+      const viewTgtEl = document.querySelector(e.target.hash); // ハッシュ部は#xxxなのでそれで画面内に映したい要素を取得
+      if (!viewTgtEl) {
+        console.error('スクロール先の要素が見つかりませんでした');
+        return;
+      }
+      // スクロール位置を計算
+      // 要素の位置 - スクロール対象要素の位置 + スクロール対象要素のスクロール量
+      const scrollToPosition = viewTgtEl.getBoundingClientRect().top - scrollTgEl.getBoundingClientRect().top + scrollTgEl.scrollTop;
+      // スクロール実行
+      scrollTgEl.scrollTo({top: scrollToPosition});
+    }
+
+    // 後からclickイベントリスナーを削除する時はこの返り値を元にする
+    return scrollAction;
+  }
+
+
+  </script>
+</head>
+<body>
+<div id="popup" class="popup">
+  <h1>ポップアップコンテンツ</h1>
+  <ul>
+    <li><a href="#section1">セクション 1</a></li>
+    <li><a href="#section2">セクション 2</a></li>
+    <li><a href="#section3">セクション 3</a></li>
+  </ul>
+  <div class="section" id="section1"><h2>セクション 1</h2>
+    <p>ここはセクション 1 の内容です。</p>
+    <p>ここはセクション 1 の内容です。</p>
+    <p>ここはセクション 1 の内容です。</p></div>
+  <div class="section" id="section2"><h2>セクション 2</h2>
+    <p>ここはセクション 2 の内容です。</p>
+    <p>ここはセクション 2 の内容です。</p>
+    <p>ここはセクション 2 の内容です。</p></div>
+  <div class="section" id="section3"><h2>セクション 3</h2>
+    <p>ここはセクション 3 の内容です。</p>
+    <p>ここはセクション 3 の内容です。</p>
+    <p>ここはセクション 3 の内容です。</p></div>
+</div>
+</body>
+</html>
