@@ -1,0 +1,129 @@
+<table id="excel-like-table"></table>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    /** @type {HTMLTableElement} */
+    const table = document.getElementById('excel-like-table');
+
+    // デモ用テーブルの初期化: 5x5のテーブルを作成し、各セルに<input>タグを挿入する
+    for (let i = 0; i < 5; i++) {
+        const row = table.insertRow(); // 新しい行を追加
+        for (let j = 0; j < 5; j++) {
+            const cell = row.insertCell(); // 新しいセルを追加
+            const input = document.createElement('input'); // 入力フィールドを作成
+            input.type = 'text'; // inputタイプをtextに設定
+            cell.appendChild(input); // セルにinputを追加
+        }
+    }
+
+    // 貼り付けイベントリスナーを追加
+    table.addEventListener('paste', function (event) {
+        // ブラウザのデフォルトの貼り付け処理を無効化
+        event.preventDefault();
+
+        // クリップボードからテキストデータを取得
+        // Excelからコピーした場合、TSV形式でクリップボードにコピーされる
+        const clipboardData = event.clipboardData || window.clipboardData;
+        const tsvText = clipboardData.getData('Text');
+
+        // TSVデータをパースして、2次元配列に変換
+        const tsvArr = parseTSV(tsvText);
+
+        // ペースト先のセルを取得して、ペーストを開始するセルに設定
+        setArrToTableInputs(tsvArr, table, document.activeElement);
+    });
+});
+
+/**
+ * TSVデータを2次元配列にパースする関数
+ * @param {string} tsvData - TSV形式の文字列
+ * @returns {string[][]} - パースされた2次元配列
+ */
+function parseTSV(tsvData) {
+    const result = [];
+    let currentRow = [];
+    let currentCell = '';
+    let inQuotes = false; // クォート内かどうかのフラグ
+    let escaping = false; // エスケープ文字処理中かどうかのフラグ
+
+    // 入力された文字列を1文字ずつ処理
+    for (let i = 0; i < tsvData.length; i++) {
+        const char = tsvData[i];
+
+        if (escaping) {
+            // エスケープシーケンス中なら、そのままセルに追加
+            currentCell += char;
+            escaping = false;
+        } else if (char === '\\') {
+            // バックスラッシュがあれば次の文字をエスケープとして処理
+            escaping = true;
+        } else if (char === '"') {
+            // ダブルクォーテーションを検出したら、クォート内外を切り替える
+            inQuotes = !inQuotes;
+        } else if (char === '\t' && !inQuotes) {
+            // クォート外でタブが見つかったら、セルを区切る
+            currentRow.push(currentCell);
+            currentCell = '';
+        } else if (char === '\n' && !inQuotes) {
+            // クォート外で改行が見つかったら、行を区切る
+            currentRow.push(currentCell);
+            result.push(currentRow);
+            currentRow = [];
+            currentCell = '';
+        } else {
+            // それ以外の文字はそのままセルに追加
+            currentCell += char;
+        }
+    }
+
+    // 最後のセルと行を追加
+    if (currentCell !== '' || currentRow.length > 0) {
+        currentRow.push(currentCell);
+        result.push(currentRow);
+    }
+
+    return result;
+}
+
+/**
+ * 2次元配列のデータをテーブルに貼り付ける関数
+ * @param {string[][]} tsvArr - TSVデータの2次元配列
+ * @param {HTMLTableElement} table - 対象のテーブル
+ * @param {HTMLElement} startElement - ペーストを開始するセル
+ */
+function setArrToTableInputs(tsvArr, table, startElement) {
+    const rows = table.rows;
+    let startRow = -1;
+    let startCol = -1;
+
+    // ペーストを開始するセルの行と列の番号を特定
+    for (let i = 0; i < rows.length; i++) {
+        for (let j = 0; j < rows[i].cells.length; j++) {
+            if (rows[i].cells[j].firstChild === startElement) {
+                startRow = i; // 開始行を記録
+                startCol = j; // 開始列を記録
+                break;
+            }
+        }
+        if (startRow !== -1) break; // 開始セルが見つかったらループを終了
+    }
+
+    if (startRow === -1 || startCol === -1) {
+        console.error('開始セルが見つかりません');
+        return;
+    }
+
+    // 2次元配列のデータを、指定されたセルからテーブルに貼り付ける
+    for (let i = 0; i < tsvArr.length; i++) {
+        for (let j = 0; j < tsvArr[i].length; j++) {
+            let targetRow = startRow + i; // 貼り付ける行
+            let targetCol = startCol + j; // 貼り付ける列
+            // 貼り付け範囲がテーブル内に収まっているか確認
+            if (targetRow < rows.length && targetCol < rows[targetRow].cells.length) {
+                rows[targetRow].cells[targetCol].firstChild.value = tsvArr[i][j]; // データをセルに反映
+            }
+        }
+    }
+}
+
+</script>
