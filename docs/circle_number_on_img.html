@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>画像クリックで青丸数字を順番に表示</title>
+    <style>
+        #image-container {
+            position: relative;
+            display: inline-block;
+        }
+        #target-image {
+            max-width: 100%;
+            height: auto;
+        }
+        .number {
+            position: absolute;
+            color: blue;
+            font-weight: bold;
+            border: 2px solid blue;
+            background-color: transparent;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        .control {
+            display: flex;
+            gap: 10px;
+        }
+        body {
+            display: flex;
+            flex-direction: column;
+        }
+        #image-container {
+            width: fit-content;
+        }
+    </style>
+</head>
+<body>
+    <div class="control">
+        <input type="file" id="image-input" accept="image/*">
+        <input type="file" id="json-input" accept="application/json" style="display:none;">
+        <button id="download-button" style="display:none;">画像をダウンロード</button>
+        <button id="undo-button" style="display:none;">最後に追加した番号を消す</button>
+        <button id="slide-all-button" style="display:none;">全ての番号をドラッグで移動</button>
+        <input type="range" id="resize-slider" min="10" max="100" value="30" style="display:none;">
+        <button id="increment-all-button" style="display:none;">全ての番号を+</button>
+        <button id="decrement-all-button" style="display:none;">全ての番号を-</button>
+        <button id="delete-all-button" style="display:none;">全ての番号を削除</button>
+        <button id="load-json-button" style="display:none;">JSONを読み込む</button>
+        <button id="download-annotations-button" style="display:none;">番号をJSONでダウンロード</button>
+    </div>
+    <div id="image-container">
+        <img id="target-image" src="" alt="クリックして数字を表示する画像" style="display:none;">
+    </div>
+
+    <script>
+        let clickCount = 1;
+        const imageInput = document.getElementById('image-input');
+        const jsonInput = document.getElementById('json-input');
+        const imageContainer = document.getElementById('image-container');
+        const targetImage = document.getElementById('target-image');
+        const downloadButton = document.getElementById('download-button');
+        const undoButton = document.getElementById('undo-button');
+        const slideAllButton = document.getElementById('slide-all-button');
+        const resizeSlider = document.getElementById('resize-slider');
+        const incrementAllButton = document.getElementById('increment-all-button');
+        const decrementAllButton = document.getElementById('decrement-all-button');
+        const deleteAllButton = document.getElementById('delete-all-button');
+        const loadJsonButton = document.getElementById('load-json-button');
+        const downloadAnnotationsButton = document.getElementById('download-annotations-button');
+        const numberElements = [];
+        let savedData = {}; // 保存データ用
+
+        // ローカルストレージからデータを読み込む
+        function loadSavedData(imageSrc) {
+            const savedDataString = localStorage.getItem('annotatedImageData');
+            if (savedDataString) {
+                savedData = JSON.parse(savedDataString);
+                if (savedData[imageSrc]) {
+                    restoreImage(savedData[imageSrc]);
+                }
+            }
+        }
+
+        // 作業状況を保存する
+        function saveData(imageSrc) {
+            savedData[imageSrc] = numberElements.map(element => ({
+                text: element.innerText,
+                left: element.style.left,
+                top: element.style.top,
+                width: element.style.width,
+                height: element.style.height,
+                fontSize: element.style.fontSize
+            }));
+            localStorage.setItem('annotatedImageData', JSON.stringify(savedData));
+        }
+
+        // 画像が読み込まれたときに保存したデータを復元する
+        function restoreImage(elementsData) {
+            // 既存の番号をクリア
+            numberElements.forEach(element => {
+                imageContainer.removeChild(element);
+            });
+            numberElements.length = 0;
+            clickCount = 1;
+
+            // データをもとに要素を復元
+            elementsData.forEach(data => {
+                const numberElement = document.createElement('div');
+                numberElement.classList.add('number');
+                numberElement.innerText = data.text;
+                numberElement.style.left = data.left;
+                numberElement.style.top = data.top;
+                numberElement.style.width = data.width;
+                numberElement.style.height = data.height;
+                numberElement.style.fontSize = data.fontSize;
+
+                imageContainer.appendChild(numberElement);
+                numberElements.push(numberElement);
+                addEditListeners(numberElement);
+                clickCount = Math.max(clickCount, parseInt(data.text) + 1);
+            });
+        }
+
+        // JSONを読み込む機能
+        loadJsonButton.addEventListener('click', () => {
+            jsonInput.click();
+        });
+
+        jsonInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const jsonData = JSON.parse(e.target.result);
+                    if (jsonData.annotations) {
+                        restoreImage(jsonData.annotations);
+                    } else {
+                        alert('不正なJSONファイルです。番号データが見つかりません。');
+                    }
+                };
+                reader.readAsText(file);
+            }
+        });
+
+        // 番号情報をJSONとしてダウンロード
+        downloadAnnotationsButton.addEventListener('click', () => {
+            if (!targetImage.src) {
+                alert('画像がアップロードされていません');
+                return;
+            }
+            const imageName = imageInput.files[0].name;
+            const annotations = numberElements.map(element => ({
+                text: element.innerText,
+                left: element.style.left,
+                top: element.style.top,
+                width: element.style.width,
+                height: element.style.height,
+                fontSize: element.style.fontSize
+            }));
+            const jsonContent = JSON.stringify({ imageName, annotations }, null, 2);
+            const blob = new Blob([jsonContent], { type: 'application/json' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `${imageName.split('.')[0]}_annotations.json`;
+            link.click();
+        });
+
+        // 画像ファイルを選択したとき
+        imageInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    targetImage.src = e.target.result;
+                    targetImage.style.display = 'block';
+                    downloadButton.style.display = 'inline-block';
+                    undoButton.style.display = 'inline-block';
+                    slideAllButton.style.display = 'inline-block';
+                    resizeSlider.style.display = 'inline-block';
+                    incrementAllButton.style.display = 'inline-block';
+                    decrementAllButton.style.display = 'inline-block';
+                    deleteAllButton.style.display = 'inline-block';
+                    loadJsonButton.style.display = 'inline-block';
+                    downloadAnnotationsButton.style.display = 'inline-block';
+
+                    loadSavedData(targetImage.src);
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // 画像がクリックされたときに番号を追加
+        targetImage.addEventListener('click', (event) => {
+            const rect = targetImage.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+
+            const numberElement = document.createElement('div');
+            numberElement.classList.add('number');
+            numberElement.innerText = clickCount;
+            numberElement.style.left = `${x - 15}px`;
+            numberElement.style.top = `${y - 15}px`;
+
+            imageContainer.appendChild(numberElement);
+            numberElements.push(numberElement);
+
+            addEditListeners(numberElement);
+            clickCount++;
+        });
+
+        // 元に戻す機能
+        undoButton.addEventListener('click', () => {
+            if (numberElements.length > 0) {
+                const lastElement = numberElements.pop();
+                imageContainer.removeChild(lastElement);
+                clickCount--;
+            }
+        });
+
+        // 全ての番号を削除する機能
+        deleteAllButton.addEventListener('click', () => {
+            numberElements.forEach(element => {
+                imageContainer.removeChild(element);
+            });
+            numberElements.length = 0;
+            clickCount = 1;
+        });
+
+        // 作業内容の保存（ページが閉じられるときなど）
+        window.addEventListener('beforeunload', () => {
+            if (targetImage.src) {
+                saveData(targetImage.src);
+            }
+        });
+
+        // ダウンロード機能
+        downloadButton.addEventListener('click', () => {
+            html2canvas(imageContainer).then((canvas) => {
+                const link = document.createElement('a');
+                link.href = canvas.toDataURL('image/png');
+                link.download = 'annotated_image.png';
+                link.click();
+            });
+        });
+
+        // 全ての番号をドラッグ移動
+        slideAllButton.addEventListener('mousedown', (event) => {
+            event.stopPropagation();
+            let shiftX = event.clientX;
+            let shiftY = event.clientY;
+
+            function moveAllAt(pageX, pageY) {
+                const deltaX = pageX - shiftX;
+                const deltaY = pageY - shiftY;
+
+                numberElements.forEach(element => {
+                    const currentLeft = parseInt(element.style.left);
+                    const currentTop = parseInt(element.style.top);
+                    element.style.left = currentLeft + deltaX + 'px';
+                    element.style.top = currentTop + deltaY + 'px';
+                });
+
+                shiftX = pageX;
+                shiftY = pageY;
+            }
+
+            function onMouseMove(event) {
+                moveAllAt(event.pageX, event.pageY);
+            }
+
+            document.addEventListener('mousemove', onMouseMove);
+
+            document.onmouseup = function() {
+                document.removeEventListener('mousemove', onMouseMove);
+                document.onmouseup = null;
+            };
+        });
+
+        // サイズ変更スライダー
+        resizeSlider.addEventListener('input', (event) => {
+            const newSize = event.target.value;
+            numberElements.forEach(element => {
+                element.style.width = `${newSize}px`;
+                element.style.height = `${newSize}px`;
+                element.style.fontSize = `${newSize / 2}px`;
+                element.style.lineHeight = `${newSize}px`;
+            });
+        });
+
+        // 全ての番号をインクリメント
+        incrementAllButton.addEventListener('click', () => {
+            numberElements.forEach(element => {
+                const currentNumber = parseInt(element.innerText);
+                element.innerText = currentNumber + 1;
+            });
+        });
+
+        // 全ての番号をデクリメント
+        decrementAllButton.addEventListener('click', () => {
+            numberElements.forEach(element => {
+                const currentNumber = parseInt(element.innerText);
+                if (currentNumber > 1) {
+                    element.innerText = currentNumber - 1;
+                }
+            });
+        });
+
+        // 番号要素に編集リスナーを追加
+        function addEditListeners(element) {
+            element.addEventListener('click', (event) => {
+                event.stopPropagation();
+                const newNumber = prompt('新しい番号を入力してください:', element.innerText);
+                if (newNumber !== null && !isNaN(newNumber)) {
+                    element.innerText = newNumber;
+                }
+            });
+            element.addEventListener('mousedown', (event) => {
+                event.stopPropagation();
+                let shiftX = event.clientX - element.getBoundingClientRect().left;
+                let shiftY = event.clientY - element.getBoundingClientRect().top;
+
+                function moveAt(pageX, pageY) {
+                    element.style.left = pageX - shiftX - imageContainer.getBoundingClientRect().left + 'px';
+                    element.style.top = pageY - shiftY - imageContainer.getBoundingClientRect().top + 'px';
+                }
+
+                function onMouseMove(event) {
+                    moveAt(event.pageX, event.pageY);
+                }
+
+                document.addEventListener('mousemove', onMouseMove);
+
+                element.onmouseup = function() {
+                    document.removeEventListener('mousemove', onMouseMove);
+                    element.onmouseup = null;
+                };
+            });
+
+            element.ondragstart = function() {
+                return false;
+            };
+        }
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+</body>
+</html>
