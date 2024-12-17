@@ -1,0 +1,96 @@
+<html>
+<head>
+</head>
+<body>
+<form action="" id="calc-form">
+    <label for="コース長">コース長</label>
+    <input type="number" id="コース長" value="2500">
+    <label for="接続とみなすのに残す持続秒数">接続とみなすのに残す持続秒数</label>
+    <input type="number" id="接続とみなすのに残す持続秒数" value="1">
+    <label for="試行回数">試行回数</label>
+    <input type="number" id="試行回数" value="10000">
+    <label for="スキル発動率">スキル発動率</label>
+    <input type="number" id="スキル発動率" value="0.928" step="0.001">
+    <table>
+        <caption>回復スキル</caption>
+        <thead>
+            <tr>
+                <th>名前</th>
+                <th>発動区間（開始）</th>
+                <th>発動区間（終了）</th>
+            </tr>
+        </thead>
+        <tbody id="回復スキルリスト">
+            <tr>
+                <td colspan="3">
+                    <button type="button" class="add">追加</button>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+    <button type="submit">計算する</button>
+    <p>成功確率：<span id="成功確率"></span></p>
+</form>
+
+
+<script>
+const rand = (min, max) => Math.random() * (max - min + 1) + min;
+const シミュレーション = () => {
+    const コース長 = document.getElementById('コース長').value;
+    const 接続とみなすのに残す持続秒数 = document.getElementById('接続とみなすのに残す持続秒数').value;
+    const 試行回数 = document.getElementById('試行回数').value;
+    const スキル発動率 = document.getElementById('スキル発動率').value;
+
+    const 成功とみなす開始地点 = コース長 * 2 / 3 - 20 * (5 * コース長 / 1000 - 接続とみなすのに残す持続秒数);
+    const 成功とみなす終了地点 = コース長 * 2 / 3 + 80;
+
+    const 回復スキルリスト = Array.from(document.querySelectorAll('#回復スキルリスト tr')).map(tr => {
+        const inputList = tr.querySelectorAll('input');
+        console.log(inputList);
+        if (inputList.length !== 3 || inputList[1].value === '' || inputList[2].value === ''
+            || Number.isNaN(Number(inputList[1].value)) || Number.isNaN(Number(inputList[2].value))) {
+            return null;
+        }
+        return {
+            名前: inputList[0].value,
+            発動区間: [inputList[1].value, inputList[2].value]
+        };
+    }).filter(v => v !== null);
+    let 成功回数 = 0;
+    for (let i = 0; i < 試行回数; i++) {
+        const 発動スキル位置リスト = [];
+        for (const 回復スキル of 回復スキルリスト) {
+            if (rand(0, 100) <= スキル発動率 * 100) {
+                const 発動位置 = rand(回復スキル.発動区間[0], 回復スキル.発動区間[1]);
+                発動スキル位置リスト.push(発動位置);
+            }
+        }
+        発動スキル位置リスト.sort((a, b) => a - b);
+        if (発動スキル位置リスト[2] && 成功とみなす開始地点 <= 発動スキル位置リスト[2] && 発動スキル位置リスト[2] <= 成功とみなす終了地点) {
+            成功回数++;
+        }
+    }
+    const 成功確率 = 成功回数 / 試行回数;
+    document.getElementById('成功確率').textContent = 成功確率;
+};
+const main = () => {
+    document.getElementById('calc-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        シミュレーション();
+    });
+    const tbody = document.querySelector('#回復スキルリスト');
+    const addRowBtn = tbody.querySelector('.add');
+    addRowBtn.addEventListener('click', (e) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td><input type="text" value=""></td>
+            <td><input type="number" value=""></td>
+            <td><input type="number" value=""></td>
+        `;
+        tbody.appendChild(tr);
+    });
+};
+document.addEventListener('DOMContentLoaded', main);
+</script>
+</body>
+</html>
