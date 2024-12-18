@@ -1,9 +1,54 @@
 <html>
 <head>
-    <script src="./ratio.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="./ratio.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
+<form action="" id="calc-form">
+  <label for="コース長">コース長</label>
+  <input type="number" id="コース長" value="2500">
+  <label for="接続とみなすのに残す持続秒数">接続とみなすのに残す持続秒数</label>
+  <input type="number" id="接続とみなすのに残す持続秒数" value="1">
+  <label for="試行回数">試行回数</label>
+  <input type="number" id="試行回数" value="10000">
+  <label for="スキル発動率">スキル発動率</label>
+  <input type="number" id="スキル発動率" value="0.928" step="0.001">
+  <table class="recovery-skill-table">
+    <caption>回復スキル</caption>
+    <thead>
+      <tr>
+        <th>名前</th>
+        <th>発動区間（開始）</th>
+        <th>発動区間（終了）</th>
+      </tr>
+    </thead>
+    <tbody id="回復スキルリスト">
+      <tr>
+        <td colspan="3">
+          <button type="button" class="add">追加</button>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+  <table class="recovery-skill-table">
+    <caption>ふり絞りトリガースキル（ふり絞りトリガー兼回復は回復側に追加してください）</caption>
+    <thead>
+      <tr>
+        <th>名前</th>
+        <th>発動区間（開始）</th>
+        <th>発動区間（終了）</th>
+      </tr>
+    </thead>
+    <tbody id="ふり絞りトリガースキルリスト">
+      <tr>
+        <td colspan="3">
+          <button type="button" class="add">追加</button>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+  <button type="submit">計算する</button>
+</form>
 <canvas id="successRate" width="800" height="400"></canvas>
 </body>
 </html>
