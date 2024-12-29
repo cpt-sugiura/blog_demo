@@ -1,54 +1,266 @@
+<!DOCTYPE html>
 <html>
 <head>
-  <script src="./ratio.js"></script>
+  <meta charset="UTF-8" />
+  <title>回復スキル計算</title>
+<!--  <script src="./ratio.js"></script>-->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    #calc-form {
+      display: grid;
+      grid-template-columns: repeat(16, 1fr);
+      gap: 10px;
+    }
+    /* label のスタイルを正しく適用するために、CSS ルールを再定義する */
+    #calc-form label {
+      justify-self: end;
+      grid-column: span 3;
+    }
+    #calc-form button,
+    #calc-form table {
+      grid-column: span 6;
+    }
+    #calc-form table {
+      border-collapse: collapse;
+      border: 1px solid black;
+    }
+    #calc-form th,
+    #calc-form td {
+      border: 1px solid black;
+    }
+    #calc-form button,
+    #calc-form input {
+      width: 100%;
+      box-sizing: border-box;
+    }
+  </style>
 </head>
 <body>
-<form action="" id="calc-form">
-  <label for="コース長">コース長</label>
-  <input type="number" id="コース長" value="2500">
-  <label for="接続とみなすのに残す持続秒数">接続とみなすのに残す持続秒数</label>
-  <input type="number" id="接続とみなすのに残す持続秒数" value="1">
-  <label for="試行回数">試行回数</label>
-  <input type="number" id="試行回数" value="10000">
-  <label for="スキル発動率">スキル発動率</label>
-  <input type="number" id="スキル発動率" value="0.928" step="0.001">
-  <table class="recovery-skill-table">
-    <caption>回復スキル</caption>
-    <thead>
-      <tr>
-        <th>名前</th>
-        <th>発動区間（開始）</th>
-        <th>発動区間（終了）</th>
-      </tr>
-    </thead>
-    <tbody id="回復スキルリスト">
-      <tr>
-        <td colspan="3">
-          <button type="button" class="add">追加</button>
-        </td>
-      </tr>
-    </tbody>
-  </table>
-  <table class="recovery-skill-table">
-    <caption>ふり絞りトリガースキル（ふり絞りトリガー兼回復は回復側に追加してください）</caption>
-    <thead>
-      <tr>
-        <th>名前</th>
-        <th>発動区間（開始）</th>
-        <th>発動区間（終了）</th>
-      </tr>
-    </thead>
-    <tbody id="ふり絞りトリガースキルリスト">
-      <tr>
-        <td colspan="3">
-          <button type="button" class="add">追加</button>
-        </td>
-      </tr>
-    </tbody>
-  </table>
-  <button type="submit">計算する</button>
-</form>
-<canvas id="successRate" width="800" height="400"></canvas>
+  <form action="" id="calc-form">
+    <label for="コース長">コース長</label>
+    <input type="number" id="コース長" value="1200">
+
+    <label for="接続とみなすのに残す持続秒数">接続扱い残持続秒数</label>
+    <input type="number" id="接続とみなすのに残す持続秒数" value="1">
+
+    <label for="試行回数">試行回数</label>
+    <input type="number" id="試行回数" value="10000">
+
+    <label for="スキル発動率">スキル発動率</label>
+    <input type="number" id="スキル発動率" value="0.928" step="0.001">
+
+    <table class="recovery-skill-table">
+      <caption>回復スキル</caption>
+      <thead>
+        <tr>
+          <th>名前</th>
+          <th>発動区間（開始）</th>
+          <th>発動区間（終了）</th>
+        </tr>
+      </thead>
+      <tbody id="回復スキルリスト">
+        <!-- 見本として最初に1行だけ用意 -->
+        <tr data-idx="0">
+          <td><input type="text" placeholder="スキル名"></td>
+          <td><input type="number" placeholder="開始位置"></td>
+          <td><input type="number" placeholder="終了位置"></td>
+        </tr>
+        <tr>
+          <td colspan="3">
+            <button type="button" class="add">追加</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <button type="submit">計算する</button>
+  </form>
+
+  <canvas id="successRate" width="800" height="400"></canvas>
+
+  <script>
+    /**
+     * 乱数生成 (min, max の間で一様にランダム)
+     * @param {number} min
+     * @param {number} max
+     * @returns {number}
+     */
+    const rand = (min, max) => min === max ? min : (Math.random() * (max - min) + min);
+
+    /**
+     * Main function to calculate the cumulative distribution
+     * @param {number[][]} s
+     * @param {number} rate
+     * @param {string} label
+     * @param {function} filter
+     * @param {object} successRange
+     * @param {number} trials 試行回数
+     * @returns {object} Cumulative distribution result
+     */
+    function calculateCumulativeDistribution(s, rate, label, filter, successRange, trials = 1000000) {
+      // n = 100 * 10000 と書かれていたが、元コードでは固定だったので試行回数を可変に
+      const n = trials;
+      const result = {};
+      for (let i = successRange.min; i <= successRange.max; i++){
+        result[i] = 0;
+      }
+
+      for (let i = 0; i < n; i++) {
+        let points = [];
+
+        for (const p of s) {
+          // p が [開始, 終了] となることを想定
+          points.push(Math.random() < rate ? rand(p[0], p[1]) : null);
+        }
+
+        // スキルが発動したもの(nullでないもの)だけを取り出してソート
+        points = points.filter(p => p !== null).sort((a, b) => a - b);
+
+        // もし3番目のスキル発動があれば、それを対象とする (points[2])
+        // なければ 0 とみなす
+        const key = Math.floor((points[2] ?? 0));
+        if(!filter(key)) {
+          continue;
+        }
+
+        if (!(key in result)) {
+          result[key] = 0;
+        }
+        result[key]++;
+      }
+
+      // 0 のエントリーがあれば削除
+      delete result[0];
+
+      // 累積分布を作成
+      const sortedKeys = Object.keys(result)
+        .map(k => Number.parseFloat(k))
+        .sort((a, b) => a - b);
+
+      const cumulativeResult = [];
+      let cumulativeSum = 0;
+      for (const key of sortedKeys) {
+        cumulativeSum += result[key];
+        cumulativeResult.push({ x: key, y: cumulativeSum / n });
+      }
+      return { label, data: cumulativeResult };
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const form = document.getElementById('calc-form');
+      const skillTbody = document.getElementById('回復スキルリスト');
+      const addButton = skillTbody.querySelector('.add');
+
+      // 「追加」ボタンで行を増やす
+      addButton.addEventListener('click', () => {
+        // 今ある行数を数えて、data-idx を新しい番号に
+        const currentRows = skillTbody.querySelectorAll('tr[data-idx]');
+        const newIndex = currentRows.length;
+
+        // テンプレート行を新しく作る
+        const newRow = document.createElement('tr');
+        newRow.setAttribute('data-idx', String(newIndex));
+        newRow.innerHTML = `
+          <td><input type="text" placeholder="スキル名"></td>
+          <td><input type="number" placeholder="開始位置"></td>
+          <td><input type="number" placeholder="終了位置"></td>
+        `;
+
+        // 「追加」ボタン行の直前に追加
+        const addButtonRow = skillTbody.querySelector('tr:last-child');
+        skillTbody.insertBefore(newRow, addButtonRow);
+      });
+
+      // フォーム送信イベント (「計算する」押下時)
+      let chartInstance = null;
+      form.addEventListener('submit', (e) => {
+        e.preventDefault(); // submit の動作キャンセル（ページリロード防止）
+
+        // 各入力値を取得
+        const rate = Number.parseFloat(document.getElementById('スキル発動率').value);
+        const l = Number.parseInt(document.getElementById('コース長').value);
+        const 接続扱い残持続秒数 = Number.parseFloat(document.getElementById('接続とみなすのに残す持続秒数').value);
+        const trials = Number.parseInt(document.getElementById('試行回数').value);
+
+        // テーブル内のスキル情報を読み取って skillList を作成
+        const rows = skillTbody.querySelectorAll('tr[data-idx]');
+        const skillList = [];
+        rows.forEach((tr) => {
+          const inputs = tr.querySelectorAll('input');
+          if (inputs.length < 3) return; // 念のためガード
+          // inputs: [名前, 発動開始, 発動終了]
+          const start = Number(inputs[1].value);
+          const end = Number(inputs[2].value);
+          if (!isNaN(start) && !isNaN(end)) {
+            skillList.push([start, end]);
+          }
+        });
+
+        // successRange を定義
+        // 例) const successRange = { min: l * 2/3 - ... , max: l * 2/3 + ... };
+        const successRange = {
+          min: Math.floor(l * 2 / 3 - 20 * (5 * l / 1000 - 接続扱い残持続秒数)),
+          max: Math.floor(l * 2 / 3 + 100),
+        };
+
+        // 成功判定 filter
+        const filter = (v) => successRange.min <= v && v <= successRange.max;
+
+        // 累積分布を計算
+        const data1 = calculateCumulativeDistribution(
+          skillList,
+          rate,
+          'Dataset 1',
+          filter,
+          successRange,
+          trials
+        );
+
+        // 既存の Chart を破棄
+        if (chartInstance) {
+          chartInstance.destroy();
+        }
+
+        // Chart.js による描画
+        const ctx = document.getElementById('successRate').getContext('2d');
+        chartInstance = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: [...new Set(data1.data.map((r) => r.x))].sort((a, b) => a - b),
+            datasets: [
+              {
+                label: data1.label,
+                data: data1.data.map((r) => ({ x: r.x, y: r.y })), // データ形式を修正
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                borderColor: 'rgba(75, 192, 192, 1)',
+                borderWidth: 1,
+                fill: true,
+              },
+            ],
+          },
+          options: {
+            scales: {
+              x: {
+                title: {
+                  display: true,
+                  text: 'Value of Points[2]',
+                },
+                type: 'linear', // x軸を連続値に設定
+                position: 'bottom',
+              },
+              y: {
+                title: {
+                  display: true,
+                  text: 'Cumulative Frequency',
+                },
+                min: 0,
+                max: 1,
+              },
+            },
+          },
+        });
+      });
+    });
+  </script>
 </body>
 </html>

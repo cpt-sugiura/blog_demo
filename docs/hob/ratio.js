@@ -5,11 +5,18 @@ const rand = (min, max) => min === max ? min : (Math.random() * (max - min) + mi
  * @param {number[][]} s
  * @param {number} rate
  * @param {string} label
+ * @param {function} filter
+ * @param {object} successRange
  * @returns {object} Cumulative distribution result
  */
-function calculateCumulativeDistribution(s, rate, label) {
+function calculateCumulativeDistribution(s, rate, label, filter, successRange) {
   const n = 100 * 10000;
   const result = {};
+  for(let i = successRange.min; i <= successRange.max; i++){
+    result[i] = 0;
+  }
+
+
   for (let i = 0; i < n; i++) {
     let points = [];
 
@@ -20,7 +27,11 @@ function calculateCumulativeDistribution(s, rate, label) {
     points = points.filter(p => p !== null);
     points.sort((a, b) => a - b);
 
-    const key = Math.floor(points[2] ?? 0);
+    const key = Math.floor((points[2] ?? 0));
+    if(!filter(key)) {
+      continue;
+    }
+
     if (!(key in result)) {
       result[key] = 0;
     }
@@ -28,7 +39,7 @@ function calculateCumulativeDistribution(s, rate, label) {
   }
   delete result[0];
 
-  const sortedKeys = Object.keys(result).map(k => parseFloat(k)).sort((a, b) => a - b);
+  const sortedKeys = Object.keys(result).map(k => Number.parseFloat(k)).sort((a, b) => a - b);
   const cumulativeResult = [];
   let cumulativeSum = 0;
   for (const key of sortedKeys) {
@@ -41,65 +52,29 @@ function calculateCumulativeDistribution(s, rate, label) {
 // Visualization using Chart.js
 document.addEventListener('DOMContentLoaded', () => {
   const ctx = document.getElementById('successRate').getContext('2d');
-  const rate = 0.928;
-  const l = 2500;
-
-  const s1 = [
-    [l * 2 / 3, l * 2 / 3],
-    [l * 2 / 3 + 30, l * 2 / 3 + 30],
-    [l * 2 / 3, l * 5 / 6],
-    [l * 2 / 3, l * 5 / 6],
-    [l * 2 / 3, l * 2 / 3 + l * 1 / 12],
-    [l * 2 / 3, l * 5 / 6],
+  const rate = Number.parseFloat(document.getElementById('スキル発動率').value);
+  const l = Number.parseInt(document.getElementById('コース長').value);
+  const skillList = [
+    [l * 1 / 6, l * 2 / 3], // rand
+    [l * 1 / 6, l * 2 / 3], // rand
+    [l * 2 / 3, l * 2 / 3], // rand
   ];
+  const 接続扱い残持続秒数 = Number.parseFloat(document.getElementById('接続とみなすのに残す持続秒数').value);
 
-  const s2 = [
-    [l * 2 / 3, l * 2 / 3],
-    [l * 2 / 3 + 30, l * 2 / 3 + 30],
-    [l * 2 / 3, l * 5 / 6],
-    [l * 2 / 3, l * 5 / 6],
-    [l * 2 / 3, l * 2 / 3 + l * 1 / 12],
-    // [l * 2 / 3, l * 5 / 6],
-    [l - 777, l - 777],
-  ];
-  const s3 = [
-    [l * 2 / 3, l * 2 / 3],
-    [l * 2 / 3 + 30, l * 2 / 3 + 30],
-    [l * 2 / 3, l * 5 / 6],
-    [l * 2 / 3, l * 5 / 6],
-    [l * 2 / 3, l * 2 / 3 + l * 1 / 12],
-  ];
-
-  const data1 = calculateCumulativeDistribution(s1, rate, 'Dataset 1');
-  const data2 = calculateCumulativeDistribution(s2, rate, 'Dataset 2');
-  const data3 = calculateCumulativeDistribution(s3, rate, 'Dataset 3');
-
+  const successRange = { min: l * 2 / 3 - 20 * (5 * l /1000 - 接続扱い残持続秒数), max: l * 2 / 3 + 100 };
+  const filter = (v) => successRange.min <= v && v <= successRange.max;
+  const data1 = calculateCumulativeDistribution(skillList, rate, 'Dataset 1', filter, successRange);
   new Chart(ctx, {
     type: 'line',
     data: {
-      labels: [...new Set([...data1.data.map(r => r.x), ...data2.data.map(r => r.x)])].sort((a, b) => a - b),
+      labels: [...new Set([...data1.data.map(r => r.x)])]
+        .sort((a, b) => a - b),
       datasets: [
         {
           label: data1.label,
           data: data1.data.map(r => r.y),
           backgroundColor: 'rgba(75, 192, 192, 0.2)',
           borderColor: 'rgba(75, 192, 192, 1)',
-          borderWidth: 1,
-          fill: true,
-        },
-        {
-          label: data2.label,
-          data: data2.data.map(r => r.y),
-          backgroundColor: 'rgba(192, 75, 75, 0.2)',
-          borderColor: 'rgba(192, 75, 75, 1)',
-          borderWidth: 1,
-          fill: true,
-        },
-        {
-          label: data3.label,
-          data: data3.data.map(r => r.y),
-          backgroundColor: 'rgba(75, 75, 192, 0.2)',
-          borderColor: 'rgba(75, 75, 192, 1)',
           borderWidth: 1,
           fill: true,
         },
