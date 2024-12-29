@@ -36,6 +36,11 @@
   </style>
 </head>
 <body>
+  <!-- datalist を追加 -->
+  <datalist id="skillNames">
+    <!-- オプションは JavaScript で動的に追加します -->
+  </datalist>
+
   <form action="" id="calc-form">
     <label for="コース長">コース長</label>
     <input type="number" id="コース長" value="1200">
@@ -59,11 +64,13 @@
         </tr>
       </thead>
       <tbody id="回復スキルリスト">
-        <!-- 見本として最初に1行だけ用意 -->
+        <!-- 最初の1行 -->
         <tr data-idx="0">
-          <td><input type="text" placeholder="スキル名"></td>
-          <td><input type="number" placeholder="開始位置"></td>
-          <td><input type="number" placeholder="終了位置"></td>
+          <td>
+            <input type="text" placeholder="スキル名" list="skillNames" class="skill-name">
+          </td>
+          <td><input type="number" placeholder="開始位置" class="skill-start"></td>
+          <td><input type="number" placeholder="終了位置" class="skill-end"></td>
         </tr>
         <tr>
           <td colspan="3">
@@ -98,10 +105,9 @@
      * @returns {object} Cumulative distribution result
      */
     function calculateCumulativeDistribution(s, rate, label, filter, successRange, trials = 1000000) {
-      // n = 100 * 10000 と書かれていたが、元コードでは固定だったので試行回数を可変に
       const n = trials;
       const result = {};
-      for (let i = successRange.min; i <= successRange.max; i++){
+      for (let i = successRange.min; i <= successRange.max; i++) {
         result[i] = 0;
       }
 
@@ -119,7 +125,7 @@
         // もし3番目のスキル発動があれば、それを対象とする (points[2])
         // なければ 0 とみなす
         const key = Math.floor((points[2] ?? 0));
-        if(!filter(key)) {
+        if (!filter(key)) {
           continue;
         }
 
@@ -146,10 +152,68 @@
       return { label, data: cumulativeResult };
     }
 
+    /** @typedef {{name: string, start: (l:number)=>number, end: (l:number)=>number}} SkillTemplate */
+
+    /** @type {SkillTemplate[]} */
+    const skillTemplates = [
+      {name: '中盤最速', start: (l) => l / 6, end: (l) => l / 6},
+      {name: '中盤ランダム', start: (l) => l / 6, end: (l) => l * 2 / 3},
+      {name: '終盤最速', start: (l) => l * 2 / 3, end: (l) => l * 2 / 3},
+      {name: '777', start: (l) => l - 777, end: (l) => l - 777},
+      {name: '快速', start: (l) => l / 2, end: (l) => l},
+    ];
+
+    /**
+     * スキル名が skillTemplates に一致する場合、start と end を自動で入力する関数
+     * @param {HTMLInputElement} nameInput
+     * @param {HTMLInputElement} startInput
+     * @param {HTMLInputElement} endInput
+     */
+    function autoFillSkillRange(nameInput, startInput, endInput) {
+      const skillName = nameInput.value.trim();
+      const template = skillTemplates.find(t => t.name === skillName);
+      if (template) {
+        const l = Number.parseInt(document.getElementById('コース長').value);
+        if (!isNaN(l)) {
+          const start = template.start(l);
+          const end = template.end(l);
+          startInput.value = Math.floor(start);
+          endInput.value = Math.floor(end);
+        }
+      }
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
       const form = document.getElementById('calc-form');
       const skillTbody = document.getElementById('回復スキルリスト');
       const addButton = skillTbody.querySelector('.add');
+      const datalist = document.getElementById('skillNames');
+
+      // Chart インスタンスを保持する変数
+      let chartInstance = null;
+
+      // datalist を skillTemplates から動的に生成
+      skillTemplates.forEach(template => {
+        const option = document.createElement('option');
+        option.value = template.name;
+        datalist.appendChild(option);
+      });
+
+      // スキル名入力フィールドにイベントリスナーを追加する関数
+      function addSkillNameListener(nameInput, startInput, endInput) {
+        nameInput.addEventListener('input', () => {
+          autoFillSkillRange(nameInput, startInput, endInput);
+        });
+      }
+
+      // 初期行のイベントリスナーを設定
+      const initialRow = skillTbody.querySelector('tr[data-idx="0"]');
+      if (initialRow) {
+        const nameInput = initialRow.querySelector('.skill-name');
+        const startInput = initialRow.querySelector('.skill-start');
+        const endInput = initialRow.querySelector('.skill-end');
+        addSkillNameListener(nameInput, startInput, endInput);
+      }
 
       // 「追加」ボタンで行を増やす
       addButton.addEventListener('click', () => {
@@ -161,18 +225,25 @@
         const newRow = document.createElement('tr');
         newRow.setAttribute('data-idx', String(newIndex));
         newRow.innerHTML = `
-          <td><input type="text" placeholder="スキル名"></td>
-          <td><input type="number" placeholder="開始位置"></td>
-          <td><input type="number" placeholder="終了位置"></td>
+          <td>
+            <input type="text" placeholder="スキル名" list="skillNames" class="skill-name">
+          </td>
+          <td><input type="number" placeholder="開始位置" class="skill-start"></td>
+          <td><input type="number" placeholder="終了位置" class="skill-end"></td>
         `;
 
         // 「追加」ボタン行の直前に追加
         const addButtonRow = skillTbody.querySelector('tr:last-child');
         skillTbody.insertBefore(newRow, addButtonRow);
+
+        // 新しい行のイベントリスナーを設定
+        const nameInput = newRow.querySelector('.skill-name');
+        const startInput = newRow.querySelector('.skill-start');
+        const endInput = newRow.querySelector('.skill-end');
+        addSkillNameListener(nameInput, startInput, endInput);
       });
 
       // フォーム送信イベント (「計算する」押下時)
-      let chartInstance = null;
       form.addEventListener('submit', (e) => {
         e.preventDefault(); // submit の動作キャンセル（ページリロード防止）
 
@@ -197,7 +268,6 @@
         });
 
         // successRange を定義
-        // 例) const successRange = { min: l * 2/3 - ... , max: l * 2/3 + ... };
         const successRange = {
           min: Math.floor(l * 2 / 3 - 20 * (5 * l / 1000 - 接続扱い残持続秒数)),
           max: Math.floor(l * 2 / 3 + 100),
