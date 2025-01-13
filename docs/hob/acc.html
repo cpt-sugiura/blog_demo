@@ -319,12 +319,12 @@ function getFormData() {
   const skills = [];
   skillRows.forEach((row) => {
     const name = row.querySelector('.skill-name').value.trim();
-    const start = parseFloat(row.querySelector('.skill-start').value);
-    const end = parseFloat(row.querySelector('.skill-end').value);
-    const baseDuration = parseFloat(row.querySelector('.skill-base-duration').value);
-    const topSpeedBonus = parseFloat(row.querySelector('.skill-top-speed-bonus').value);
-    const accelBonus = parseFloat(row.querySelector('.skill-accel-bonus').value);
-    const currentSpeedBonus = parseFloat(row.querySelector('.skill-current-speed-bonus').value);
+    const start = Number.parseFloat(row.querySelector('.skill-start').value || '0');
+    const end = Number.parseFloat(row.querySelector('.skill-end').value || '0');
+    const baseDuration = Number.parseFloat(row.querySelector('.skill-base-duration').value || '0');
+    const topSpeedBonus = Number.parseFloat(row.querySelector('.skill-top-speed-bonus').value || '0');
+    const accelBonus = Number.parseFloat(row.querySelector('.skill-accel-bonus').value || '0');
+    const currentSpeedBonus = Number.parseFloat(row.querySelector('.skill-current-speed-bonus').value || '0');
 
     if (!Number.isNaN(start) && !Number.isNaN(end)) {
       skills.push({
