@@ -429,12 +429,12 @@ function addSkillRow() {
   newRow.setAttribute('data-idx', `${newIndex}`);
   newRow.innerHTML = `
         <td><input type="text" class="skill-name" placeholder="スキル名" /></td>
-        <td><input type="number" class="skill-start" placeholder="開始m" step="0.01" /></td>
-        <td><input type="number" class="skill-end" placeholder="終了m" step="0.01" /></td>
-        <td><input type="number" class="skill-base-duration" placeholder="秒" step="0.01" /></td>
-        <td><input type="number" class="skill-top-speed-bonus" placeholder="+最高速" step="0.01" /></td>
-        <td><input type="number" class="skill-accel-bonus" placeholder="+加速度" step="0.01" /></td>
-        <td><input type="number" class="skill-current-speed-bonus" placeholder="+現在速" step="0.01" /></td>
+        <td><input type="number" class="skill-start" placeholder="開始m" step="0.01" value="0" /></td>
+        <td><input type="number" class="skill-end" placeholder="終了m" step="0.01" value="0" /></td>
+        <td><input type="number" class="skill-base-duration" placeholder="秒" step="0.01" value="3" /></td>
+        <td><input type="number" class="skill-top-speed-bonus" placeholder="+最高速" step="0.01" value="0" /></td>
+        <td><input type="number" class="skill-accel-bonus" placeholder="+加速度" step="0.01" value="0" /></td>
+        <td><input type="number" class="skill-current-speed-bonus" placeholder="+現在速" step="0.01" value="0" /></td>
         <td><button type="button" class="delete-row">削除</button></td>
       `;
 
