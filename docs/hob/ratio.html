@@ -336,6 +336,27 @@
       document.getElementById('スキル発動率表示').value = rate.toFixed(3);
     }
 
+    /**
+     * スキル名入力フィールドにイベントリスナーを追加する関数
+     * @param {HTMLInputElement} nameInput
+     * @param {HTMLInputElement} startInput
+     * @param {HTMLInputElement} endInput
+     */
+    function addSkillNameListener(nameInput, startInput, endInput) {
+      nameInput.addEventListener('input', () => {
+        autoFillSkillRange(nameInput, startInput, endInput);
+        saveFormData(); // データを保存
+      });
+
+      startInput.addEventListener('input', () => {
+        saveFormData();
+      });
+
+      endInput.addEventListener('input', () => {
+        saveFormData();
+      });
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
       const form = document.getElementById('calc-form');
       const skillTbody = document.getElementById('回復スキルリスト');
@@ -501,148 +522,7 @@
 
       // 自動保存の設定
       setupAutoSave();
-    });
-
-    /**
-     * スキル名入力フィールドにイベントリスナーを追加する関数
-     * @param {HTMLInputElement} nameInput
-     * @param {HTMLInputElement} startInput
-     * @param {HTMLInputElement} endInput
-     */
-    function addSkillNameListener(nameInput, startInput, endInput) {
-      nameInput.addEventListener('input', () => {
-        autoFillSkillRange(nameInput, startInput, endInput);
-        saveFormData(); // データを保存
-      });
-
-      startInput.addEventListener('input', () => {
-        saveFormData();
-      });
-
-      endInput.addEventListener('input', () => {
-        saveFormData();
-      });
-    }
-
-    /**
-     * フォームデータを localStorage に保存する関数
-     */
-    function saveFormData() {
-      const l = Number.parseInt(document.getElementById('コース長').value);
-      const connectionSeconds = Number.parseFloat(document.getElementById('接続とみなすのに残す持続秒数').value);
-      const trials = Number.parseInt(document.getElementById('試行回数').value);
-      const 賢さ = Number.parseInt(document.getElementById('賢さ').value);
-      const 調子補正 = Number.parseFloat(document.getElementById('調子').value);
-      const rate = getスキル発動率(賢さ, 調子補正);
-
-      const skillTbody = document.getElementById('回復スキルリスト');
-      const rows = skillTbody.querySelectorAll('tr[data-idx]');
-      const skills = [];
-
-      rows.forEach((tr) => {
-        const inputs = tr.querySelectorAll('input');
-        if (inputs.length < 3) return;
-        const name = inputs[0].value.trim();
-        const start = Number(inputs[1].value);
-        const end = Number(inputs[2].value);
-        if (name && !isNaN(start) && !isNaN(end)) {
-          skills.push({ name, start, end });
-        }
-      });
-
-      const formData = {
-        l,
-        connectionSeconds,
-        trials,
-        賢さ,
-        調子補正,
-        skills,
-      };
-
-      localStorage.setItem('calcFormData', JSON.stringify(formData));
-    }
-
-    /**
-     * フォームデータを localStorage から読み込み、フォームに反映する関数
-     */
-    function loadFormData() {
-      const formDataJSON = localStorage.getItem('calcFormData');
-      if (!formDataJSON) return;
-
-      try {
-        const formData = JSON.parse(formDataJSON);
-        document.getElementById('賢さ').value = formData.賢さ;
-        document.getElementById('調子').value = formData.調子補正;
-        document.getElementById('コース長').value = formData.l;
-        document.getElementById('接続とみなすのに残す持続秒数').value = formData.connectionSeconds;
-        document.getElementById('試行回数').value = formData.trials;
-
-        // スキル発動率表示を更新
-        const rate = getスキル発動率(formData.賢さ, formData.調子補正);
-        document.getElementById('スキル発動率表示').value = rate.toFixed(3);
-
-        const skillTbody = document.getElementById('回復スキルリスト');
-        // 最初の行をクリア（初期状態）
-        skillTbody.querySelectorAll('tr[data-idx]').forEach(tr => tr.remove());
-        // 「追加」ボタン行を保持
-        const addButtonRow = skillTbody.querySelector('tr:last-child');
-
-        formData.skills.forEach((skill, index) => {
-          const newRow = document.createElement('tr');
-          newRow.setAttribute('data-idx', String(index));
-          newRow.innerHTML = `
-            <td>
-              <input type="text" placeholder="スキル名" list="skillNames" class="skill-name" value="${skill.name}">
-            </td>
-            <td><input type="number" placeholder="開始位置" class="skill-start" value="${skill.start}"></td>
-            <td><input type="number" placeholder="終了位置" class="skill-end" value="${skill.end}"></td>
-          `;
-          skillTbody.insertBefore(newRow, addButtonRow);
-
-          // イベントリスナーを追加
-          const nameInput = newRow.querySelector('.skill-name');
-          const startInput = newRow.querySelector('.skill-start');
-          const endInput = newRow.querySelector('.skill-end');
-          addSkillNameListener(nameInput, startInput, endInput);
-        });
-
-        // 元々の初期行がある場合、それを復元
-        if (formData.skills.length === 0) {
-          const initialRow = skillTbody.querySelector('tr[data-idx="0"]');
-          if (initialRow) {
-            const nameInput = initialRow.querySelector('.skill-name');
-            const startInput = initialRow.querySelector('.skill-start');
-            const endInput = initialRow.querySelector('.skill-end');
-            addSkillNameListener(nameInput, startInput, endInput);
-          }
-        }
-      } catch (e) {
-        console.error('Failed to load form data:', e);
-      }
-    }
-
-    /**
-     * フォームデータの自動保存を設定する関数
-     */
-    function setupAutoSave() {
-      const form = document.getElementById('calc-form');
-
-      // イベントデリゲーションを利用して、すべての入力フィールドの変更を監視
-      form.addEventListener('input', () => {
-        saveFormData();
-        updateSkillRateDisplay();
-      });
-    }
-
-    /**
-     * スキル発動率の表示を更新する関数
-     */
-    function updateSkillRateDisplay() {
-      const 賢さ = Number.parseInt(document.getElementById('賢さ').value);
-      const 調子補正 = Number.parseFloat(document.getElementById('調子').value);
-      const rate = getスキル発動率(賢さ, 調子補正);
-      document.getElementById('スキル発動率表示').value = rate.toFixed(3);
-    }
+  });
   </script>
 </body>
 </html>
