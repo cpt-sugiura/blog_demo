@@ -1,365 +1,387 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8"/>
   <title>タイム差シミュレーション</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    /* レイアウト調整 */
-    #calc-form {
-      display: grid;
-      grid-template-columns: repeat(12, fit-content(100%));
-      width: 100%;
-      gap: 10px;
-    }
-    #calc-form label {
-      justify-self: end;
-    }
-    #calc-form button,
-    #calc-form table {
-      grid-column: span 12;
-    }
-    #calc-form table {
-      border-collapse: collapse;
-      border: 1px solid black;
-    }
-    #calc-form th,
-    #calc-form td {
-      border: 1px solid black;
-      padding: 4px;
-    }
-    #calc-form button,
-    #calc-form input,
-    #calc-form select {
-      width: 100%;
-      box-sizing: border-box;
-    }
-    .skill-table thead th {
-      background: #f0f0f0;
-    }
-    .skill-table caption {
-      font-weight: bold;
-    }
+      /* レイアウト調整 */
+      #calc-form {
+          display: grid;
+          grid-template-columns: repeat(12, fit-content(100%));
+          width: 100%;
+          gap: 10px;
+      }
+
+      #calc-form label {
+          justify-self: end;
+      }
+
+      #calc-form button,
+      #calc-form table {
+          grid-column: span 12;
+      }
+
+      #calc-form table {
+          border-collapse: collapse;
+          border: 1px solid black;
+      }
+
+      #calc-form th,
+      #calc-form td {
+          border: 1px solid black;
+          padding: 4px;
+      }
+
+      #calc-form button,
+      #calc-form input,
+      #calc-form select {
+          width: 100%;
+          box-sizing: border-box;
+      }
+
+      .skill-table thead th {
+          background: #f0f0f0;
+      }
+
+      .skill-table caption {
+          font-weight: bold;
+      }
   </style>
 </head>
 <body>
-  <!-- フォーム -->
-  <form id="calc-form">
-    <label for="courseLength">コース長</label>
-    <input type="number" id="courseLength" value="1200" />
+<!-- フォーム -->
+<form id="calc-form">
+  <label for="courseLength">コース長</label>
+  <input type="number" id="courseLength" value="1200"/>
 
-    <label for="baseMidSpeed">素の中盤最高速度</label>
-    <input type="number" id="baseMidSpeed" value="16" step="0.01" />
+  <label for="baseMidSpeed">素の中盤最高速度</label>
+  <input type="number" id="baseMidSpeed" value="16" step="0.01"/>
 
-    <label for="baseFinalSpeed">素の終盤最高速度</label>
-    <input type="number" id="baseFinalSpeed" value="20" step="0.01" />
+  <label for="baseFinalSpeed">素の終盤最高速度</label>
+  <input type="number" id="baseFinalSpeed" value="20" step="0.01"/>
 
-    <label for="baseAccel">素の加速度</label>
-    <input type="number" id="baseAccel" value="0.5" step="0.01" />
+  <label for="baseAccel">素の加速度</label>
+  <input type="number" id="baseAccel" value="0.5" step="0.01"/>
 
-    <label for="skillRate">スキル発動率</label>
-    <input type="number" id="skillRate" value="0.3" min="0" max="1" step="0.01" />
+  <label for="skillRate">スキル発動率</label>
+  <input type="number" id="skillRate" value="0.3" min="0" max="1" step="0.01"/>
 
-    <label for="trials">試行回数</label>
-    <input type="number" id="trials" value="10000" />
+  <label for="trials">試行回数</label>
+  <input type="number" id="trials" value="10000"/>
 
-    <table class="skill-table">
-      <caption>スキル一覧</caption>
-      <thead>
-        <tr>
-          <th>スキル名</th>
-          <th>発動区間(開始)</th>
-          <th>発動区間(終了)</th>
-          <th>素の持続時間</th>
-          <th>最高速度+ (上乗せ)</th>
-          <th>加速度+ (上乗せ)</th>
-          <th>現在速度+ (上乗せ)</th>
-        </tr>
-      </thead>
-      <tbody id="skillTableBody">
-        <!-- 初期行(1行) -->
-        <tr data-idx="0">
-          <td><input type="text" class="skill-name" placeholder="スキル名" value="スキル例" /></td>
-          <td><input type="number" class="skill-start" placeholder="開始m" value="200" step="0.01" /></td>
-          <td><input type="number" class="skill-end" placeholder="終了m" value="400" step="0.01" /></td>
-          <td><input type="number" class="skill-base-duration" placeholder="秒" value="3" step="0.01" /></td>
-          <td><input type="number" class="skill-top-speed-bonus" placeholder="+最高速" value="2" step="0.01" /></td>
-          <td><input type="number" class="skill-accel-bonus" placeholder="+加速度" value="1" step="0.01" /></td>
-          <td><input type="number" class="skill-current-speed-bonus" placeholder="+現在速" value="0" step="0.01" /></td>
-          <td><button type="button" class="delete-row">削除</button></td>
-        </tr>
-        <tr>
-          <td colspan="7">
-            <button type="button" id="addSkillRow">スキル追加</button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+  <table class="skill-table">
+    <caption>スキル一覧</caption>
+    <thead>
+      <tr>
+        <th>スキル名</th>
+        <th>発動区間(開始)</th>
+        <th>発動区間(終了)</th>
+        <th>素の持続時間</th>
+        <th>最高速度+ (上乗せ)</th>
+        <th>加速度+ (上乗せ)</th>
+        <th>現在速度+ (上乗せ)</th>
+      </tr>
+    </thead>
+    <tbody id="skillTableBody">
+      <!-- 初期行(1行) -->
+      <tr data-idx="0">
+        <td><input type="text" class="skill-name" placeholder="スキル名" value="スキル例"/></td>
+        <td><input type="number" class="skill-start" placeholder="開始m" value="200" step="0.01"/></td>
+        <td><input type="number" class="skill-end" placeholder="終了m" value="400" step="0.01"/></td>
+        <td><input type="number" class="skill-base-duration" placeholder="秒" value="3" step="0.01"/></td>
+        <td><input type="number" class="skill-top-speed-bonus" placeholder="+最高速" value="2" step="0.01"/></td>
+        <td><input type="number" class="skill-accel-bonus" placeholder="+加速度" value="1" step="0.01"/></td>
+        <td><input type="number" class="skill-current-speed-bonus" placeholder="+現在速" value="0" step="0.01"/></td>
+        <td>
+          <button type="button" class="delete-row">削除</button>
+        </td>
+      </tr>
+      <tr>
+        <td colspan="7">
+          <button type="button" id="addSkillRow">スキル追加</button>
+        </td>
+      </tr>
+    </tbody>
+  </table>
 
-    <button type="submit">計算する</button>
-  </form>
+  <button type="submit">計算する</button>
+</form>
 
-  <!-- グラフ -->
-  <canvas id="timeDiffChart" width="800" height="400"></canvas>
+<!-- グラフ -->
+<canvas id="timeDiffChart" width="800" height="400"></canvas>
+<div id="rangeTableContainer">
+  <h3>累積度数範囲と最大秒数差分</h3>
+  <table id="rangeTable" border="1" style="width: 100%; border-collapse: collapse; text-align: center;">
+    <thead>
+      <tr>
+        <th>累積度数範囲</th>
+        <th>最大秒数差分</th>
+        <th>距離</th>
+      </tr>
+    </thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<script>
+/**
+ * ローカルストレージキー
+ */
+const STORAGE_KEY = 'timeSimulationFormData';
 
-  <script>
-    /**
-     * ローカルストレージキー
-     */
-    const STORAGE_KEY = 'timeSimulationFormData';
+/**
+ * 0~1 の乱数を返す
+ */
+const rand01 = () => Math.random();
 
-    /**
-     * 0~1 の乱数を返す
-     */
-    const rand01 = () => Math.random();
+/**
+ * 「スキルなし」での走破タイムを計算する関数
+ *  - ゴール手前で部分的に dt を調整して、離散的にならないようにする
+ */
+function runNoSkill(courseLength, baseMidSpeed, baseFinalSpeed, baseAccel) {
+  const dt = 0.0166667; // (1/60)秒を基本ステップにする例
+  let time = 0;
+  let distance = 0;
+  let currentSpeed = 0;
 
-    /**
-     * 「スキルなし」での走破タイムを計算する関数
-     *  - ゴール手前で部分的に dt を調整して、離散的にならないようにする
-     */
-    function runNoSkill(courseLength, baseMidSpeed, baseFinalSpeed, baseAccel) {
-      const dt = 0.0166667; // (1/60)秒を基本ステップにする例
-      let time = 0;
-      let distance = 0;
-      let currentSpeed = 0;
+  const midPoint = (2 / 3) * courseLength;
 
-      const midPoint = (2 / 3) * courseLength;
+  while (true) {
+    // 中盤か終盤か判定
+    const isFinal = distance >= midPoint;
+    const topSpeed = isFinal ? baseFinalSpeed : baseMidSpeed;
 
-      while (true) {
-        // 中盤か終盤か判定
-        const isFinal = distance >= midPoint;
-        const topSpeed = isFinal ? baseFinalSpeed : baseMidSpeed;
-
-        // 加速
-        currentSpeed += baseAccel * dt;
-        if (currentSpeed > topSpeed) {
-          currentSpeed = topSpeed;
-        }
-
-        // 次のステップでゴールを越えるか判定
-        const nextDist = distance + currentSpeed * dt;
-        if (nextDist >= courseLength) {
-          // ゴール手前分を線形に計算して終了
-          const remain = courseLength - distance;
-          // 時間 = 残り距離 / 現在速度
-          const partialDt = remain / currentSpeed;
-          time += partialDt;
-          distance = courseLength;
-          break;
-        } else {
-          // 通常ステップ
-          distance = nextDist;
-          time += dt;
-        }
-
-        // ゴールチェック
-        if (distance >= courseLength) {
-          break;
-        }
-      }
-
-      return time;
+    // 加速
+    currentSpeed += baseAccel * dt;
+    if (currentSpeed > topSpeed) {
+      currentSpeed = topSpeed;
     }
 
-    /**
-     * 「スキルあり」での走破タイムを計算する関数
-     *  - runNoSkill 同様、ゴール直前だけ部分的に dt を小さくして線形計算
-     */
-    function runWithSkill(courseLength, baseMidSpeed, baseFinalSpeed, baseAccel, skillRate, skills) {
-      // どのスキルが発動するか判定
-      const activeSkills = [];
-      skills.forEach((skill) => {
-        if (rand01() < skillRate) {
-          const triggerPoint = skill.start + (skill.end - skill.start) * rand01();
-          const actualDuration = skill.baseDuration * (courseLength / 1000);
-          activeSkills.push({
-            name: skill.name,
-            startDistance: triggerPoint,
-            duration: actualDuration,
-            topSpeedBonus: skill.topSpeedBonus,
-            accelBonus: skill.accelBonus,
-            currentSpeedBonus: skill.currentSpeedBonus,
-          });
-        }
+    // 次のステップでゴールを越えるか判定
+    const nextDist = distance + currentSpeed * dt;
+    if (nextDist >= courseLength) {
+      // ゴール手前分を線形に計算して終了
+      const remain = courseLength - distance;
+      // 時間 = 残り距離 / 現在速度
+      const partialDt = remain / currentSpeed;
+      time += partialDt;
+      distance = courseLength;
+      break;
+    } else {
+      // 通常ステップ
+      distance = nextDist;
+      time += dt;
+    }
+
+    // ゴールチェック
+    if (distance >= courseLength) {
+      break;
+    }
+  }
+
+  return time;
+}
+
+/**
+ * 「スキルあり」での走破タイムを計算する関数
+ *  - runNoSkill 同様、ゴール直前だけ部分的に dt を小さくして線形計算
+ */
+function runWithSkill(courseLength, baseMidSpeed, baseFinalSpeed, baseAccel, skillRate, skills) {
+  // どのスキルが発動するか判定
+  const activeSkills = [];
+  skills.forEach((skill) => {
+    if (rand01() < skillRate) {
+      const triggerPoint = skill.start + (skill.end - skill.start) * rand01();
+      const actualDuration = skill.baseDuration * (courseLength / 1000);
+      activeSkills.push({
+        name: skill.name,
+        startDistance: triggerPoint,
+        duration: actualDuration,
+        topSpeedBonus: skill.topSpeedBonus,
+        accelBonus: skill.accelBonus,
+        currentSpeedBonus: skill.currentSpeedBonus,
       });
+    }
+  });
 
-      // 距離->時刻テーブルを作る(スキルなし) => 発動開始時刻計算
-      const dt = 0.0166667; // (1/60)秒
-      const distanceToTimeMap = [];
-      {
-        let tmpTime = 0;
-        let tmpDist = 0;
-        let tmpSpeed = 0;
-        const midPoint = (2 / 3) * courseLength;
+  // 距離->時刻テーブルを作る(スキルなし) => 発動開始時刻計算
+  const dt = 0.0166667; // (1/60)秒
+  const distanceToTimeMap = [];
+  {
+    let tmpTime = 0;
+    let tmpDist = 0;
+    let tmpSpeed = 0;
+    const midPoint = (2 / 3) * courseLength;
 
-        while (tmpDist < courseLength) {
-          const isFinal = tmpDist >= midPoint;
-          const topSpeed = isFinal ? baseFinalSpeed : baseMidSpeed;
+    while (tmpDist < courseLength) {
+      const isFinal = tmpDist >= midPoint;
+      const topSpeed = isFinal ? baseFinalSpeed : baseMidSpeed;
 
-          tmpSpeed += baseAccel * dt;
-          if (tmpSpeed > topSpeed) {
-            tmpSpeed = topSpeed;
-          }
-          const nextDist = tmpDist + tmpSpeed * dt;
-          tmpTime += dt;
-          tmpDist = nextDist;
-          distanceToTimeMap.push({ dist: tmpDist, time: tmpTime });
-          if (tmpDist >= courseLength) break;
-        }
+      tmpSpeed += baseAccel * dt;
+      if (tmpSpeed > topSpeed) {
+        tmpSpeed = topSpeed;
       }
+      const nextDist = tmpDist + tmpSpeed * dt;
+      tmpTime += dt;
+      tmpDist = nextDist;
+      distanceToTimeMap.push({dist: tmpDist, time: tmpTime});
+      if (tmpDist >= courseLength) break;
+    }
+  }
 
-      // 距離->時刻
-      function getTimeByDistance(d) {
-        for (let i = 0; i < distanceToTimeMap.length; i++) {
-          if (distanceToTimeMap[i].dist >= d) {
-            return distanceToTimeMap[i].time;
-          }
-        }
-        return distanceToTimeMap[distanceToTimeMap.length - 1].time;
+  // 距離->時刻
+  function getTimeByDistance(d) {
+    for (let i = 0; i < distanceToTimeMap.length; i++) {
+      if (distanceToTimeMap[i].dist >= d) {
+        return distanceToTimeMap[i].time;
       }
+    }
+    return distanceToTimeMap[distanceToTimeMap.length - 1].time;
+  }
 
-      // 発動開始時刻と終了時刻
-      activeSkills.forEach((sk) => {
-        const startTime = getTimeByDistance(sk.startDistance);
-        sk.startTime = startTime;
-        sk.endTime = startTime + sk.duration;
+  // 発動開始時刻と終了時刻
+  activeSkills.forEach((sk) => {
+    const startTime = getTimeByDistance(sk.startDistance);
+    sk.startTime = startTime;
+    sk.endTime = startTime + sk.duration;
+  });
+
+  // 実際の走行シミュレーション (スキルあり)
+  let time = 0;
+  let distance = 0;
+  let currentSpeed = 0;
+  const midPoint2 = (2 / 3) * courseLength;
+
+  while (true) {
+    // スキルボーナス合算
+    let activeTopSpeedBonus = 0;
+    let activeAccelBonus = 0;
+    let activeCurrentSpeedBonus = 0;
+
+    // いまの time で発動中のスキルを合算
+    activeSkills.forEach((sk) => {
+      if (sk.startTime <= time && time < sk.endTime) {
+        activeTopSpeedBonus += sk.topSpeedBonus;
+        activeAccelBonus += sk.accelBonus;
+        activeCurrentSpeedBonus += sk.currentSpeedBonus;
+      }
+    });
+
+    // 中盤 or 終盤判定
+    const isFinal = distance >= midPoint2;
+    const baseTopSpeed = isFinal ? baseFinalSpeed : baseMidSpeed;
+    const topSpeed = baseTopSpeed + activeTopSpeedBonus;
+
+    // 加速
+    currentSpeed += (baseAccel + activeAccelBonus) * dt;
+    if (currentSpeed > topSpeed) {
+      currentSpeed = topSpeed;
+    }
+
+    // currentSpeedBonus は「継続的に速度を上乗せ」する設計が多いが、
+    // ここでは 'フレームごとに足す' 解釈なら:
+    currentSpeed += activeCurrentSpeedBonus * dt;
+
+    // 次フレームでゴール越え判定
+    const nextDist = distance + currentSpeed * dt;
+    if (nextDist >= courseLength) {
+      const remain = courseLength - distance;
+      const partialDt = remain / currentSpeed;
+      time += partialDt;
+      distance = courseLength;
+      break;
+    } else {
+      distance = nextDist;
+      time += dt;
+    }
+
+    if (distance >= courseLength) {
+      break;
+    }
+  }
+
+  return time;
+}
+
+/**
+ * フォーム入力をまとめて取得する
+ */
+function getFormData() {
+  const courseLength = parseFloat(document.getElementById('courseLength').value);
+  const baseMidSpeed = parseFloat(document.getElementById('baseMidSpeed').value);
+  const baseFinalSpeed = parseFloat(document.getElementById('baseFinalSpeed').value);
+  const baseAccel = parseFloat(document.getElementById('baseAccel').value);
+  const skillRate = parseFloat(document.getElementById('skillRate').value);
+  const trials = parseInt(document.getElementById('trials').value, 10);
+
+  const skillRows = document.querySelectorAll('#skillTableBody tr[data-idx]');
+  const skills = [];
+  skillRows.forEach((row) => {
+    const name = row.querySelector('.skill-name').value.trim();
+    const start = parseFloat(row.querySelector('.skill-start').value);
+    const end = parseFloat(row.querySelector('.skill-end').value);
+    const baseDuration = parseFloat(row.querySelector('.skill-base-duration').value);
+    const topSpeedBonus = parseFloat(row.querySelector('.skill-top-speed-bonus').value);
+    const accelBonus = parseFloat(row.querySelector('.skill-accel-bonus').value);
+    const currentSpeedBonus = parseFloat(row.querySelector('.skill-current-speed-bonus').value);
+
+    if (!Number.isNaN(start) && !Number.isNaN(end)) {
+      skills.push({
+        name,
+        start,
+        end,
+        baseDuration,
+        topSpeedBonus,
+        accelBonus,
+        currentSpeedBonus,
       });
-
-      // 実際の走行シミュレーション (スキルあり)
-      let time = 0;
-      let distance = 0;
-      let currentSpeed = 0;
-      const midPoint2 = (2 / 3) * courseLength;
-
-      while (true) {
-        // スキルボーナス合算
-        let activeTopSpeedBonus = 0;
-        let activeAccelBonus = 0;
-        let activeCurrentSpeedBonus = 0;
-
-        // いまの time で発動中のスキルを合算
-        activeSkills.forEach((sk) => {
-          if (sk.startTime <= time && time < sk.endTime) {
-            activeTopSpeedBonus += sk.topSpeedBonus;
-            activeAccelBonus += sk.accelBonus;
-            activeCurrentSpeedBonus += sk.currentSpeedBonus;
-          }
-        });
-
-        // 中盤 or 終盤判定
-        const isFinal = distance >= midPoint2;
-        const baseTopSpeed = isFinal ? baseFinalSpeed : baseMidSpeed;
-        const topSpeed = baseTopSpeed + activeTopSpeedBonus;
-
-        // 加速
-        currentSpeed += (baseAccel + activeAccelBonus) * dt;
-        if (currentSpeed > topSpeed) {
-          currentSpeed = topSpeed;
-        }
-
-        // currentSpeedBonus は「継続的に速度を上乗せ」する設計が多いが、
-        // ここでは 'フレームごとに足す' 解釈なら:
-        currentSpeed += activeCurrentSpeedBonus * dt;
-
-        // 次フレームでゴール越え判定
-        const nextDist = distance + currentSpeed * dt;
-        if (nextDist >= courseLength) {
-          const remain = courseLength - distance;
-          const partialDt = remain / currentSpeed;
-          time += partialDt;
-          distance = courseLength;
-          break;
-        } else {
-          distance = nextDist;
-          time += dt;
-        }
-
-        if (distance >= courseLength) {
-          break;
-        }
-      }
-
-      return time;
     }
+  });
 
-    /**
-     * フォーム入力をまとめて取得する
-     */
-    function getFormData() {
-      const courseLength = parseFloat(document.getElementById('courseLength').value);
-      const baseMidSpeed = parseFloat(document.getElementById('baseMidSpeed').value);
-      const baseFinalSpeed = parseFloat(document.getElementById('baseFinalSpeed').value);
-      const baseAccel = parseFloat(document.getElementById('baseAccel').value);
-      const skillRate = parseFloat(document.getElementById('skillRate').value);
-      const trials = parseInt(document.getElementById('trials').value, 10);
+  return {
+    courseLength,
+    baseMidSpeed,
+    baseFinalSpeed,
+    baseAccel,
+    skillRate,
+    trials,
+    skills,
+  };
+}
 
-      const skillRows = document.querySelectorAll('#skillTableBody tr[data-idx]');
-      const skills = [];
-      skillRows.forEach((row) => {
-        const name = row.querySelector('.skill-name').value.trim();
-        const start = parseFloat(row.querySelector('.skill-start').value);
-        const end = parseFloat(row.querySelector('.skill-end').value);
-        const baseDuration = parseFloat(row.querySelector('.skill-base-duration').value);
-        const topSpeedBonus = parseFloat(row.querySelector('.skill-top-speed-bonus').value);
-        const accelBonus = parseFloat(row.querySelector('.skill-accel-bonus').value);
-        const currentSpeedBonus = parseFloat(row.querySelector('.skill-current-speed-bonus').value);
+/**
+ * フォームデータを localStorage に保存
+ */
+function saveFormData() {
+  const data = getFormData();
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
 
-        if (!Number.isNaN(start) && !Number.isNaN(end)) {
-          skills.push({
-            name,
-            start,
-            end,
-            baseDuration,
-            topSpeedBonus,
-            accelBonus,
-            currentSpeedBonus,
-          });
-        }
-      });
+/**
+ * localStorage から読み込み
+ */
+function loadFormData() {
+  const json = localStorage.getItem(STORAGE_KEY);
+  if (!json) return;
+  try {
+    const data = JSON.parse(json);
+    document.getElementById('courseLength').value = data.courseLength;
+    document.getElementById('baseMidSpeed').value = data.baseMidSpeed;
+    document.getElementById('baseFinalSpeed').value = data.baseFinalSpeed;
+    document.getElementById('baseAccel').value = data.baseAccel;
+    document.getElementById('skillRate').value = data.skillRate;
+    document.getElementById('trials').value = data.trials;
 
-      return {
-        courseLength,
-        baseMidSpeed,
-        baseFinalSpeed,
-        baseAccel,
-        skillRate,
-        trials,
-        skills,
-      };
-    }
+    // スキルテーブル
+    const skillBody = document.getElementById('skillTableBody');
+    skillBody.querySelectorAll('tr[data-idx]').forEach((row) => row.remove());
+    const addBtnRow = skillBody.querySelector('tr:not([data-idx])');
 
-    /**
-     * フォームデータを localStorage に保存
-     */
-    function saveFormData() {
-      const data = getFormData();
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-    }
-
-    /**
-     * localStorage から読み込み
-     */
-    function loadFormData() {
-      const json = localStorage.getItem(STORAGE_KEY);
-      if (!json) return;
-      try {
-        const data = JSON.parse(json);
-        document.getElementById('courseLength').value = data.courseLength;
-        document.getElementById('baseMidSpeed').value = data.baseMidSpeed;
-        document.getElementById('baseFinalSpeed').value = data.baseFinalSpeed;
-        document.getElementById('baseAccel').value = data.baseAccel;
-        document.getElementById('skillRate').value = data.skillRate;
-        document.getElementById('trials').value = data.trials;
-
-        // スキルテーブル
-        const skillBody = document.getElementById('skillTableBody');
-        skillBody.querySelectorAll('tr[data-idx]').forEach((row) => row.remove());
-        const addBtnRow = skillBody.querySelector('tr:not([data-idx])');
-
-        data.skills?.forEach((sk, i) => {
-          const newRow = document.createElement('tr');
-          newRow.setAttribute('data-idx', `${i}`);
-          newRow.innerHTML = `
+    data.skills?.forEach((sk, i) => {
+      const newRow = document.createElement('tr');
+      newRow.setAttribute('data-idx', `${i}`);
+      newRow.innerHTML = `
             <td><input type="text" class="skill-name" placeholder="スキル名" value="${sk.name || ''}" step="0.01"/></td>
             <td><input type="number" class="skill-start" placeholder="開始m" value="${sk.start}" step="0.01"/></td>
             <td><input type="number" class="skill-end" placeholder="終了m" value="${sk.end}" step="0.01"/></td>
@@ -369,43 +391,43 @@
             <td><input type="number" class="skill-current-speed-bonus" placeholder="+現在速" value="${sk.currentSpeedBonus}" step="0.01"/></td>
             <td><button type="button" class="delete-row">削除</button></td>
           `;
-          skillBody.insertBefore(newRow, addBtnRow);
-        });
-      } catch (err) {
-        console.error('Failed to parse form data:', err);
-      }
-    }
+      skillBody.insertBefore(newRow, addBtnRow);
+    });
+  } catch (err) {
+    console.error('Failed to parse form data:', err);
+  }
+}
 
-    /**
-     * スキル行を再構成する関数
-     */
-    function reindexSkillRows() {
-      const rows = document.querySelectorAll('#skillTableBody tr[data-idx]');
-      rows.forEach((row, index) => {
-        row.setAttribute('data-idx', index);
-      });
-    }
+/**
+ * スキル行を再構成する関数
+ */
+function reindexSkillRows() {
+  const rows = document.querySelectorAll('#skillTableBody tr[data-idx]');
+  rows.forEach((row, index) => {
+    row.setAttribute('data-idx', index);
+  });
+}
 
-    /**
-     * スキル行を削除する関数
-     */
-    function deleteSkillRow(row) {
-      row.remove(); // 行を削除
-      reindexSkillRows(); // インデックスを再構成
-      saveFormData(); // データを保存
-    }
+/**
+ * スキル行を削除する関数
+ */
+function deleteSkillRow(row) {
+  row.remove(); // 行を削除
+  reindexSkillRows(); // インデックスを再構成
+  saveFormData(); // データを保存
+}
 
-    /**
-     * スキル行を追加する関数
-     */
-    function addSkillRow() {
-      const skillBody = document.getElementById('skillTableBody');
-      const currentRows = skillBody.querySelectorAll('tr[data-idx]');
-      const newIndex = currentRows.length;
+/**
+ * スキル行を追加する関数
+ */
+function addSkillRow() {
+  const skillBody = document.getElementById('skillTableBody');
+  const currentRows = skillBody.querySelectorAll('tr[data-idx]');
+  const newIndex = currentRows.length;
 
-      const newRow = document.createElement('tr');
-      newRow.setAttribute('data-idx', `${newIndex}`);
-      newRow.innerHTML = `
+  const newRow = document.createElement('tr');
+  newRow.setAttribute('data-idx', `${newIndex}`);
+  newRow.innerHTML = `
         <td><input type="text" class="skill-name" placeholder="スキル名" /></td>
         <td><input type="number" class="skill-start" placeholder="開始m" step="0.01" /></td>
         <td><input type="number" class="skill-end" placeholder="終了m" step="0.01" /></td>
@@ -416,145 +438,237 @@
         <td><button type="button" class="delete-row">削除</button></td>
       `;
 
-      // 追加ボタン行の直前に挿入
-      const addBtnRow = skillBody.querySelector('tr:not([data-idx])');
-      skillBody.insertBefore(newRow, addBtnRow);
+  // 追加ボタン行の直前に挿入
+  const addBtnRow = skillBody.querySelector('tr:not([data-idx])');
+  skillBody.insertBefore(newRow, addBtnRow);
 
-      // 削除ボタンにイベントリスナーを追加
-      const deleteButton = newRow.querySelector('.delete-row');
-      deleteButton.addEventListener('click', () => deleteSkillRow(newRow));
+  // 削除ボタンにイベントリスナーを追加
+  const deleteButton = newRow.querySelector('.delete-row');
+  deleteButton.addEventListener('click', () => deleteSkillRow(newRow));
 
-      saveFormData();
+  saveFormData();
+}
+
+// グローバルChartインスタンス
+let chartInstance = null;
+
+/**
+ * フォーム送信 -> メイン計算処理
+ */
+function onSubmit(e) {
+  e.preventDefault();
+  saveFormData();
+
+  // 入力データ取得
+  const {
+    courseLength,
+    baseMidSpeed,
+    baseFinalSpeed,
+    baseAccel,
+    skillRate,
+    trials,
+    skills,
+  } = getFormData();
+
+  // スキルなしタイムを一度だけ計算
+  const noSkillTime = runNoSkill(courseLength, baseMidSpeed, baseFinalSpeed, baseAccel);
+
+  // 多試行でタイム差を収集
+  const diffArray = [];
+  for (let i = 0; i < trials; i++) {
+    const withSkillTime = runWithSkill(
+      courseLength,
+      baseMidSpeed,
+      baseFinalSpeed,
+      baseAccel,
+      skillRate,
+      skills
+    );
+    // diff = スキルなし - スキルあり (正ならスキルありのほうが速い)
+    let diff = noSkillTime - withSkillTime;
+    // 負値は0でクリップ (左端は0)
+    if (diff < 0) diff = 0;
+    diffArray.push(diff);
+  }
+
+  // ヒストグラム化
+  diffArray.sort((a, b) => a - b);
+  const minVal = 0;
+  const maxVal = diffArray[diffArray.length - 1] || 0;
+  const binCount = 40;
+  const binSize = (maxVal - minVal) / (binCount || 1);
+  const bins = new Array(binCount).fill(0);
+
+  diffArray.forEach((val) => {
+    const index = Math.floor((val - minVal) / binSize);
+    const safeIndex = (index === binCount) ? binCount - 1 : index;
+    if (safeIndex >= 0 && safeIndex < binCount) {
+      bins[safeIndex]++;
     }
+  });
 
-    // グローバルChartインスタンス
-    let chartInstance = null;
+  // ヒストグラムの折れ線用データ
+  const histData = [];
+  for (let i = 0; i < binCount; i++) {
+    const xVal = minVal + (i + 0.5) * binSize;
+    const freq = bins[i] / trials;
+    histData.push({x: xVal, y: freq});
+  }
 
-    /**
-     * フォーム送信 -> メイン計算処理
-     */
-    function onSubmit(e) {
-      e.preventDefault();
-      saveFormData();
+  // 累積グラフ用の縦線プラグイン
+  const verticalLinePlugin = {
+    id: 'verticalLinePlugin',
+    afterDraw(chart) {
+      const ctx = chart.ctx;
+      const yAxis = chart.scales.y1;
+      const xAxis = chart.scales.x;
+      const cumulativeData = chart.data.datasets[1].data;
 
-      // 入力データ取得
-      const {
-        courseLength,
-        baseMidSpeed,
-        baseFinalSpeed,
-        baseAccel,
-        skillRate,
-        trials,
-        skills,
-      } = getFormData();
+      // 累積度数 0.1 ごとに縦線を描画
+      for (let i = 1; i <= 10; i++) {
+        const targetCumulative = i / 10;
+        const closestPoint = cumulativeData.find(point => point.y >= targetCumulative);
+        if (!closestPoint) continue;
 
-      // スキルなしタイムを一度だけ計算
-      const noSkillTime = runNoSkill(courseLength, baseMidSpeed, baseFinalSpeed, baseAccel);
-
-      // 多試行でタイム差を収集
-      const diffArray = [];
-      for (let i = 0; i < trials; i++) {
-        const withSkillTime = runWithSkill(
-          courseLength,
-          baseMidSpeed,
-          baseFinalSpeed,
-          baseAccel,
-          skillRate,
-          skills
-        );
-        // diff = スキルなし - スキルあり (正ならスキルありのほうが速い)
-        let diff = noSkillTime - withSkillTime;
-        // 負値は0でクリップ (左端は0)
-        if (diff < 0) diff = 0;
-        diffArray.push(diff);
+        const xPosition = xAxis.getPixelForValue(closestPoint.x);
+        ctx.beginPath();
+        ctx.moveTo(xPosition, yAxis.top);
+        ctx.lineTo(xPosition, yAxis.bottom);
+        ctx.strokeStyle = 'rgba(255, 0, 0, 0.5)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
       }
+    },
+  };
 
-      // ヒストグラム化
-      diffArray.sort((a, b) => a - b);
-      const minVal = 0;
-      const maxVal = diffArray[diffArray.length - 1] || 0;
-      const binCount = 40;
-      const binSize = (maxVal - minVal) / (binCount || 1);
-      const bins = new Array(binCount).fill(0);
+  Chart.register(verticalLinePlugin);
 
-      diffArray.forEach((val) => {
-        const index = Math.floor((val - minVal) / binSize);
-        const safeIndex = (index === binCount) ? binCount - 1 : index;
-        if (safeIndex >= 0 && safeIndex < binCount) {
-          bins[safeIndex]++;
-        }
-      });
+  // 累積グラフ用データ作成
+  const cumulativeData = [];
+  let cumulativeSum = 0;
+  for (let i = 0; i < binCount; i++) {
+    cumulativeSum += bins[i] / trials; // 累積度数
+    const xVal = minVal + (i + 0.5) * binSize;
+    cumulativeData.push({x: xVal, y: cumulativeSum});
+  }
 
-      // ヒストグラムの折れ線用データ
-      const histData = [];
-      for (let i = 0; i < binCount; i++) {
-        const xVal = minVal + (i + 0.5) * binSize;
-        const freq = bins[i] / trials;
-        histData.push({ x: xVal, y: freq });
-      }
+  // 累積度数 0.1 ごとの範囲と最大秒数差分を計算
+  const rangeTableBody = document.querySelector('#rangeTable tbody');
+  rangeTableBody.querySelectorAll('.range-row').forEach(row => row.remove());
+  let prevCumulative = 0;
+  let rangeStart = 0;
+  cumulativeData.forEach((point, index) => {
+    const currentCumulative = Math.floor(point.y * 10) / 10; // 累積度数の整数部 0.1 刻み
+    if (currentCumulative > prevCumulative) {
+      // 範囲内の最大秒数差分を計算
+      const rangeEnd = point.x;
+      const rangeMax = cumulativeData.slice(rangeStart, index + 1).reduce((max, p) => Math.max(max, p.x), 0);
 
-      // Chart.js による描画 (line chart)
-      if (chartInstance) {
-        chartInstance.destroy();
-      }
-      const ctx = document.getElementById('timeDiffChart').getContext('2d');
-      chartInstance = new Chart(ctx, {
-        type: 'line',
-        data: {
-          datasets: [
-            {
-              label: 'タイム差ヒストグラム (スキルなし - スキルあり)',
-              data: histData,
-              backgroundColor: 'rgba(75, 192, 192, 0.2)',
-              borderColor: 'rgba(75, 192, 192, 1)',
-              fill: false,
-              tension: 0.4, // なめらかな線
-              pointRadius: 0, // ポイントを非表示
-            },
-          ],
+      // 表に追加
+      const row = document.createElement('tr');
+      row.className = 'range-row';
+      row.innerHTML = `
+        <td>${prevCumulative.toFixed(1)} - ${currentCumulative.toFixed(1)}</td>
+        <td>${rangeMax.toFixed(2)}</td>
+        <td>${(rangeMax * baseFinalSpeed).toFixed(2)}</td>
+      `;
+      rangeTableBody.appendChild(row);
+
+      // 次の範囲へ
+      rangeStart = index;
+      prevCumulative = currentCumulative;
+    }
+  });
+
+  // Chart.js 描画
+  if (chartInstance) {
+    chartInstance.destroy();
+  }
+  const ctx = document.getElementById('timeDiffChart').getContext('2d');
+  chartInstance = new Chart(ctx, {
+    type: 'line',
+    data: {
+      datasets: [
+        {
+          label: 'タイム差ヒストグラム (スキルなし - スキルあり)',
+          data: histData,
+          backgroundColor: 'rgba(75, 192, 192, 0.2)',
+          borderColor: 'rgba(75, 192, 192, 1)',
+          fill: false,
+          tension: 0.4,
+          pointRadius: 0,
+          yAxisID: 'y',
         },
-        options: {
-          responsive: true,
-          scales: {
-            x: {
-              type: 'linear',
-              title: {
-                display: true,
-                text: 'タイム差 (秒)',
-              },
-            },
-            y: {
-              title: {
-                display: true,
-                text: '相対度数',
-              },
-              beginAtZero: true,
-            },
+        {
+          label: '累積度数',
+          data: cumulativeData,
+          backgroundColor: 'rgba(192, 75, 192, 0.2)',
+          borderColor: 'rgba(192, 75, 192, 1)',
+          fill: false,
+          tension: 0.4,
+          pointRadius: 0,
+          yAxisID: 'y1',
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: {
+          display: true,
+        },
+      },
+      scales: {
+        x: {
+          type: 'linear',
+          title: {
+            display: true,
+            text: 'タイム差 (秒)',
           },
         },
-      });
-    }
+        y: {
+          type: 'linear',
+          position: 'left',
+          title: {
+            display: true,
+            text: '相対度数',
+          },
+          beginAtZero: true,
+        },
+        y1: {
+          type: 'linear',
+          position: 'right',
+          title: {
+            display: true,
+            text: '累積度数',
+          },
+          beginAtZero: true,
+        },
+      },
+    },
+  });
+}
 
-    document.addEventListener('DOMContentLoaded', () => {
-      const form = document.getElementById('calc-form');
-      const addBtn = document.getElementById('addSkillRow');
+document.addEventListener('DOMContentLoaded', () => {
+  const form = document.getElementById('calc-form');
+  const addBtn = document.getElementById('addSkillRow');
 
-      // ロード
-      loadFormData();
+  // ロード
+  loadFormData();
 
-      // イベント
-      form.addEventListener('submit', onSubmit);
-      form.addEventListener('input', saveFormData);
-      addBtn.addEventListener('click', () => {
-        addSkillRow();
-        saveFormData();
-      });
-      const skillRows = document.querySelectorAll('.delete-row');
-      skillRows.forEach((btn) =>
-        btn.addEventListener('click', () => deleteSkillRow(btn.closest('tr')))
-      );
+  // イベント
+  form.addEventListener('submit', onSubmit);
+  form.addEventListener('input', saveFormData);
+  addBtn.addEventListener('click', () => {
+    addSkillRow();
+    saveFormData();
+  });
+  const skillRows = document.querySelectorAll('.delete-row');
+  skillRows.forEach((btn) =>
+    btn.addEventListener('click', () => deleteSkillRow(btn.closest('tr')))
+  );
 
-    });
-  </script>
+});
+</script>
 </body>
 </html>
