@@ -151,17 +151,76 @@
 </table>
 
 <script>
-/**
- * ローカルストレージキー
- */
-const STORAGE_KEY = 'timeSimulationFormData';
+// ------------------------------------------------------
+//  1) シミュレーションで多用する値を一度だけ計算して使い回す
+// ------------------------------------------------------
 
 /**
- * 「スキルなし」での走破タイムを計算する関数
- *  - ゴール手前で部分的に dt を調整して、離散的にならないようにする
+ * 与えられたパラメータで「スキルなし」走行時の
+ * 距離→時刻の対応表を作成する (1/60秒刻み)。
+ * これを runWithSkill でも使い回して、
+ * 「距離○m に到達する時刻」 を高速に求める。
  */
-function runNoSkill(courseLength, baseMidSpeed, baseFinalSpeed, baseAccel) {
-  const dt = 0.0166667; // (1/60)秒を基本ステップにする例
+function createDistanceToTimeMap(courseLength, baseMidSpeed, baseFinalSpeed, baseAccel, dt = 1/60) {
+  const distanceToTimeMap = [];
+  let tmpTime = 0;
+  let tmpDist = 0;
+  let tmpSpeed = 0;
+  const midPoint = (2 / 3) * courseLength;
+
+  while (tmpDist < courseLength) {
+    const isFinal = tmpDist >= midPoint;
+    const topSpeed = isFinal ? baseFinalSpeed : baseMidSpeed;
+
+    // 加速処理
+    tmpSpeed += baseAccel * dt;
+    if (tmpSpeed > topSpeed) {
+      tmpSpeed = topSpeed;
+    }
+    const nextDist = tmpDist + tmpSpeed * dt;
+    tmpTime += dt;
+    tmpDist = nextDist;
+    distanceToTimeMap.push({ dist: tmpDist, time: tmpTime });
+    if (tmpDist >= courseLength) break;
+  }
+
+  return distanceToTimeMap;
+}
+
+/**
+ * 距離 d に到達する時刻を二分探索で求める補助関数
+ *  - 線形探索でも良いですが、要素数が多い場合は二分探索のほうが高速です
+ */
+function getTimeByDistance(distanceToTimeMap, d) {
+  const n = distanceToTimeMap.length;
+  if (n === 0) return 0;
+  if (d <= distanceToTimeMap[0].dist) {
+    return distanceToTimeMap[0].time;
+  }
+  if (d >= distanceToTimeMap[n - 1].dist) {
+    return distanceToTimeMap[n - 1].time;
+  }
+
+  // 二分探索
+  let left = 0;
+  let right = n - 1;
+  while (left < right) {
+    const mid = (left + right) >> 1;
+    if (distanceToTimeMap[mid].dist < d) {
+      left = mid + 1;
+    } else {
+      right = mid;
+    }
+  }
+  return distanceToTimeMap[left].time;
+}
+
+/**
+ * 「スキルなし」での走破タイム(実測)を計算する関数
+ *  - ゴール手前は部分的に dt を調整して離散化の影響を減らす
+ *  - これは 1 回計算しておけばよい
+ */
+function runNoSkill(courseLength, baseMidSpeed, baseFinalSpeed, baseAccel, dt = 1/60) {
   let time = 0;
   let distance = 0;
   let currentSpeed = 0;
@@ -169,7 +228,6 @@ function runNoSkill(courseLength, baseMidSpeed, baseFinalSpeed, baseAccel) {
   const midPoint = (2 / 3) * courseLength;
 
   while (true) {
-    // 中盤か終盤か判定
     const isFinal = distance >= midPoint;
     const topSpeed = isFinal ? baseFinalSpeed : baseMidSpeed;
 
@@ -182,7 +240,6 @@ function runNoSkill(courseLength, baseMidSpeed, baseFinalSpeed, baseAccel) {
     // 次のステップでゴールを越えるか判定
     const nextDist = distance + currentSpeed * dt;
     if (nextDist >= courseLength) {
-      // ゴール手前分を線形に計算して終了
       const remain = courseLength - distance;
       const partialDt = remain / currentSpeed;
       time += partialDt;
@@ -192,139 +249,96 @@ function runNoSkill(courseLength, baseMidSpeed, baseFinalSpeed, baseAccel) {
       distance = nextDist;
       time += dt;
     }
-
-    if (distance >= courseLength) {
-      break;
-    }
   }
 
   return time;
 }
 
-/**
- * 「スキルあり」での走破タイムを計算する関数
- *  - runNoSkill 同様、ゴール直前だけ部分的に dt を小さくして線形計算
- */
-function runWithSkill(courseLength, baseMidSpeed, baseFinalSpeed, baseAccel, skillRate, skills) {
+// ------------------------------------------------------
+//  2) スキルありの走破タイムを計算 (スキル開始時刻を map で高速化)
+// ------------------------------------------------------
+function runWithSkill(
+  courseLength,
+  baseMidSpeed,
+  baseFinalSpeed,
+  baseAccel,
+  skillRate,
+  skills,
+  distanceToTimeMap, // 使い回し用マップを外部から受け取る
+  dt = 1/60
+) {
   // どのスキルが発動するか判定
+  // 発動位置(距離)をランダムに決め、開始時刻を distanceToTimeMap で高速取得
   const activeSkills = [];
-  skills.forEach((skill) => {
-    if (shouldActivateSkill(skillRate, skill.individualRate)) {
-      // ランダムな位置で発動 (発動開始～終了距離の間)
-      const triggerPoint = skill.start + (skill.end - skill.start) * Math.random();
-      // 持続時間はコース長に応じてスケーリングする例 (適宜調整)
-      const actualDuration = skill.baseDuration * (courseLength / 1000);
+  for (let i = 0; i < skills.length; i++) {
+    const sk = skills[i];
+    if (shouldActivateSkill(skillRate, sk.individualRate)) {
+      const triggerPoint = sk.start + (sk.end - sk.start) * Math.random();
+      const actualDuration = sk.baseDuration * (courseLength / 1000);
+      const startTime = getTimeByDistance(distanceToTimeMap, triggerPoint);
       activeSkills.push({
-        name: skill.name,
-        startDistance: triggerPoint,
-        duration: actualDuration,
-        topSpeedBonus: skill.topSpeedBonus,
-        accelBonus: skill.accelBonus,
-        currentSpeedBonus: skill.currentSpeedBonus,
+        name: sk.name,
+        startTime,
+        endTime: startTime + actualDuration,
+        topSpeedBonus: sk.topSpeedBonus,
+        accelBonus: sk.accelBonus,
+        currentSpeedBonus: sk.currentSpeedBonus,
       });
     }
-  });
-
-  // 距離->時刻テーブルを作る(スキルなし) => 発動開始時刻計算のため
-  const dt = 0.0166667; // (1/60)秒
-  const distanceToTimeMap = [];
-  {
-    let tmpTime = 0;
-    let tmpDist = 0;
-    let tmpSpeed = 0;
-    const midPoint = (2 / 3) * courseLength;
-
-    while (tmpDist < courseLength) {
-      const isFinal = tmpDist >= midPoint;
-      const topSpeed = isFinal ? baseFinalSpeed : baseMidSpeed;
-
-      tmpSpeed += baseAccel * dt;
-      if (tmpSpeed > topSpeed) {
-        tmpSpeed = topSpeed;
-      }
-      const nextDist = tmpDist + tmpSpeed * dt;
-      tmpTime += dt;
-      tmpDist = nextDist;
-      distanceToTimeMap.push({ dist: tmpDist, time: tmpTime });
-      if (tmpDist >= courseLength) break;
-    }
   }
 
-  // 距離->時刻を返す補助関数
-  function getTimeByDistance(d) {
-    for (let i = 0; i < distanceToTimeMap.length; i++) {
-      if (distanceToTimeMap[i].dist >= d) {
-        return distanceToTimeMap[i].time;
-      }
-    }
-    return distanceToTimeMap[distanceToTimeMap.length - 1].time;
-  }
-
-  // 発動開始時刻と終了時刻を付与
-  activeSkills.forEach((sk) => {
-    const startTime = getTimeByDistance(sk.startDistance);
-    sk.startTime = startTime;
-    sk.endTime = startTime + sk.duration;
-  });
-
-  // 実際の走行シミュレーション (スキルあり)
+  // 改めて 0秒からゴールまで step-by-step で走行シミュレーション
+  // (スキルが発動するかどうかは時刻で判定)
   let time = 0;
   let distance = 0;
   let currentSpeed = 0;
   const midPoint2 = (2 / 3) * courseLength;
 
   while (true) {
-    // いま時刻で発動中のスキルボーナス合算
+    // いまの時刻で発動中のスキルを合算
     let activeTopSpeedBonus = 0;
     let activeAccelBonus = 0;
     let activeCurrentSpeedBonus = 0;
-
-    activeSkills.forEach((sk) => {
-      if (sk.startTime <= time && time < sk.endTime) {
-        activeTopSpeedBonus += sk.topSpeedBonus;
-        activeAccelBonus += sk.accelBonus;
-        activeCurrentSpeedBonus += sk.currentSpeedBonus;
+    for (let j = 0; j < activeSkills.length; j++) {
+      const as = activeSkills[j];
+      if (as.startTime <= time && time < as.endTime) {
+        activeTopSpeedBonus += as.topSpeedBonus;
+        activeAccelBonus += as.accelBonus;
+        activeCurrentSpeedBonus += as.currentSpeedBonus;
       }
-    });
+    }
 
-    // 中盤 or 終盤判定
     const isFinal = distance >= midPoint2;
     const baseTopSpeed = isFinal ? baseFinalSpeed : baseMidSpeed;
     const topSpeed = baseTopSpeed + activeTopSpeedBonus;
 
-    // 加速
+    // 加速 & 現在速度+の処理
     currentSpeed += (baseAccel + activeAccelBonus) * dt;
+    // currentSpeedBonus はフレーム毎に加算
+    currentSpeed += activeCurrentSpeedBonus * dt;
     if (currentSpeed > topSpeed) {
       currentSpeed = topSpeed;
     }
 
-    // currentSpeedBonus はフレームごとの加算として扱う例
-    currentSpeed += activeCurrentSpeedBonus * dt;
-
-    // 次フレームでゴール越え判定
+    // ゴール判定
     const nextDist = distance + currentSpeed * dt;
     if (nextDist >= courseLength) {
       const remain = courseLength - distance;
       const partialDt = remain / currentSpeed;
       time += partialDt;
-      distance = courseLength;
       break;
     } else {
-      distance = nextDist;
       time += dt;
-    }
-
-    if (distance >= courseLength) {
-      break;
+      distance = nextDist;
     }
   }
 
   return time;
 }
 
-/**
- * スキル発動判定 (個別確率が設定されていれば個別優先、それ以外はグローバルなスキル発動率)
- */
+// ------------------------------------------------------
+//  3) スキル発動確率の判定 (グローバル or 個別)
+// ------------------------------------------------------
 function shouldActivateSkill(globalRate, individualRate) {
   const rate = (individualRate != null && !Number.isNaN(individualRate))
     ? individualRate
@@ -332,9 +346,11 @@ function shouldActivateSkill(globalRate, individualRate) {
   return Math.random() < rate;
 }
 
-/**
- * フォーム入力をまとめて取得する
- */
+// ------------------------------------------------------
+//  4) 入力データの取得・保存
+// ------------------------------------------------------
+const STORAGE_KEY = 'timeSimulationFormData';
+
 function getFormData() {
   const courseLength = parseFloat(document.getElementById('courseLength').value);
   const baseMidSpeed = parseFloat(document.getElementById('baseMidSpeed').value);
@@ -387,17 +403,11 @@ function getFormData() {
   };
 }
 
-/**
- * フォームデータを localStorage に保存
- */
 function saveFormData() {
   const data = getFormData();
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 }
 
-/**
- * localStorage から読み込み
- */
 function loadFormData() {
   const json = localStorage.getItem(STORAGE_KEY);
   if (!json) return;
@@ -440,9 +450,6 @@ function loadFormData() {
   }
 }
 
-/**
- * スキル行を再構成する関数
- */
 function reindexSkillRows() {
   const rows = document.querySelectorAll('#skillTableBody tr[data-idx]');
   rows.forEach((row, index) => {
@@ -450,18 +457,12 @@ function reindexSkillRows() {
   });
 }
 
-/**
- * スキル行を削除する関数
- */
 function deleteSkillRow(row) {
-  row.remove(); // 行を削除
-  reindexSkillRows(); // インデックスを再構成
-  saveFormData(); // データを保存
+  row.remove();
+  reindexSkillRows();
+  saveFormData();
 }
 
-/**
- * スキル行を追加する関数
- */
 function addSkillRow() {
   const skillBody = document.getElementById('skillTableBody');
   const currentRows = skillBody.querySelectorAll('tr[data-idx]');
@@ -485,25 +486,29 @@ function addSkillRow() {
     <td><button type="button" class="delete-row">削除</button></td>
   `;
 
-  // 追加ボタン行の直前に挿入
   const addBtnRow = skillBody.querySelector('tr:not([data-idx])');
   skillBody.insertBefore(newRow, addBtnRow);
 
-  // 削除ボタンにイベントリスナーを追加
   const deleteButton = newRow.querySelector('.delete-row');
   deleteButton.addEventListener('click', () => deleteSkillRow(newRow));
 
   saveFormData();
 }
 
-// グローバルChartインスタンス
-let chartInstance = null;
-
-/**
- * A/B用のタイム差分布(ヒストグラム)と累積度数を計算して返すヘルパー
- */
-function calcDiffDistribution(noSkillTime, trials, courseLength, baseMidSpeed, baseFinalSpeed, baseAccel, skillRate, skills) {
-  // 多試行でタイム差を収集
+// ------------------------------------------------------
+//  5) A/B用のタイム差分布(ヒストグラム)と累積度数を計算
+// ------------------------------------------------------
+function calcDiffDistribution(
+  noSkillTime,
+  trials,
+  courseLength,
+  baseMidSpeed,
+  baseFinalSpeed,
+  baseAccel,
+  skillRate,
+  skills,
+  distanceToTimeMap // ← 使い回し用マップを渡す
+) {
   const diffArray = [];
   for (let i = 0; i < trials; i++) {
     const withSkillTime = runWithSkill(
@@ -512,11 +517,12 @@ function calcDiffDistribution(noSkillTime, trials, courseLength, baseMidSpeed, b
       baseFinalSpeed,
       baseAccel,
       skillRate,
-      skills
+      skills,
+      distanceToTimeMap
     );
-    // diff = スキルなし - スキルあり (正ならスキルありのほうが速い)
     let diff = noSkillTime - withSkillTime;
-    if (diff < 0) diff = 0; // 負値は0にクリップ
+    // 負値は 0 にクリップする例
+    if (diff < 0) diff = 0;
     diffArray.push(diff);
   }
 
@@ -535,7 +541,7 @@ function calcDiffDistribution(noSkillTime, trials, courseLength, baseMidSpeed, b
     }
   });
 
-  // ヒストグラム折れ線用データ
+  // ヒストグラム折れ線用
   const histData = [];
   for (let i = 0; i < binCount; i++) {
     const xVal = minVal + (i + 0.5) * binSize;
@@ -543,11 +549,11 @@ function calcDiffDistribution(noSkillTime, trials, courseLength, baseMidSpeed, b
     histData.push({ x: xVal, y: freq });
   }
 
-  // 累積データ
+  // 累積度数
   const cumulativeData = [];
   let cumulativeSum = 0;
   for (let i = 0; i < binCount; i++) {
-    cumulativeSum += bins[i] / trials; // 累積度数
+    cumulativeSum += bins[i] / trials;
     const xVal = minVal + (i + 0.5) * binSize;
     cumulativeData.push({ x: xVal, y: cumulativeSum });
   }
@@ -555,21 +561,17 @@ function calcDiffDistribution(noSkillTime, trials, courseLength, baseMidSpeed, b
   return { histData, cumulativeData, diffArray };
 }
 
-/**
- * A/B を一つのテーブルにまとめて表示
- *   - 累積度数を 0.0～1.0 を 0.1 刻み (10 区間) で見て、
- *     その区間に含まれる秒数差 (x) の最大値を求め、テーブルに出力
- */
+// ------------------------------------------------------
+//  6) A/B を一つのテーブルにまとめて表示
+// ------------------------------------------------------
 function buildCombinedRangeTable(distA, distB, baseFinalSpeed) {
   const tableBody = document.querySelector('#rangeTableCombined tbody');
-  tableBody.innerHTML = ''; // いったんクリア
+  tableBody.innerHTML = '';
 
-  // 0.0～1.0 を 0.1 刻みでループ
   for (let i = 0; i < 10; i++) {
     const rangeStart = i / 10;
     const rangeEnd = (i + 1) / 10;
 
-    // A/B それぞれで、この累積度数範囲に入っている x(=差分秒) の最大値を求める
     const maxA = getMaxDiffInRange(distA.cumulativeData, rangeStart, rangeEnd);
     const maxB = getMaxDiffInRange(distB.cumulativeData, rangeStart, rangeEnd);
 
@@ -584,31 +586,29 @@ function buildCombinedRangeTable(distA, distB, baseFinalSpeed) {
     tableBody.appendChild(row);
   }
 
-  /**
-   * cumulativeData の中から、累積度数 (y) が [rangeStart, rangeEnd) に入る
-   * x(=秒数差) の最大値を返す
-   */
   function getMaxDiffInRange(cumulativeData, rangeStart, rangeEnd) {
     let maxVal = 0;
-    cumulativeData.forEach(({ x, y }) => {
+    for (let i = 0; i < cumulativeData.length; i++) {
+      const { x, y } = cumulativeData[i];
       if (y >= rangeStart && y < rangeEnd) {
         if (x > maxVal) {
           maxVal = x;
         }
       }
-    });
+    }
     return maxVal;
   }
 }
 
-/**
- * メイン計算処理 (フォーム送信)
- */
+// ------------------------------------------------------
+//  7) メイン処理 (フォーム送信時)
+// ------------------------------------------------------
+let chartInstance = null;
+
 function onSubmit(e) {
   e.preventDefault();
   saveFormData();
 
-  // 入力データ取得
   const {
     courseLength,
     baseMidSpeed,
@@ -619,31 +619,43 @@ function onSubmit(e) {
     skills,
   } = getFormData();
 
-  // スキルなしタイムを一度だけ計算
-  const noSkillTime = runNoSkill(courseLength, baseMidSpeed, baseFinalSpeed, baseAccel);
+  // dtは必要に応じて変更可能 (1/60 より荒くすると計算は速くなる)
+  const dt = 1/60;
 
-  // スキルセットAとBに含まれるスキルを抽出
+  // 1) スキルなしの時刻テーブル & 走破タイムを一度だけ計算
+  const distanceToTimeMap = createDistanceToTimeMap(courseLength, baseMidSpeed, baseFinalSpeed, baseAccel, dt);
+  const noSkillTime = runNoSkill(courseLength, baseMidSpeed, baseFinalSpeed, baseAccel, dt);
+
+  // 2) スキルセットA, B だけ抽出
   const skillsA = skills.filter(s => s.belongsToA);
   const skillsB = skills.filter(s => s.belongsToB);
 
-  // A/B のタイム差分布を計算
-  const distA = calcDiffDistribution(noSkillTime, trials, courseLength, baseMidSpeed, baseFinalSpeed, baseAccel, skillRate, skillsA);
-  const distB = calcDiffDistribution(noSkillTime, trials, courseLength, baseMidSpeed, baseFinalSpeed, baseAccel, skillRate, skillsB);
+  // 3) A/B の分布を計算 (map を使い回して高速化)
+  const distA = calcDiffDistribution(
+    noSkillTime, trials,
+    courseLength, baseMidSpeed, baseFinalSpeed, baseAccel,
+    skillRate, skillsA,
+    distanceToTimeMap
+  );
+  const distB = calcDiffDistribution(
+    noSkillTime, trials,
+    courseLength, baseMidSpeed, baseFinalSpeed, baseAccel,
+    skillRate, skillsB,
+    distanceToTimeMap
+  );
 
-  // A/B を行をそろえて一つのテーブルにまとめる
+  // 4) A/B をテーブルに出力
   buildCombinedRangeTable(distA, distB, baseFinalSpeed);
 
-  // Chart.js 描画 (ヒストグラム & 累積)
+  // 5) グラフ描画
   if (chartInstance) {
     chartInstance.destroy();
   }
   const ctx = document.getElementById('timeDiffChart').getContext('2d');
-
   chartInstance = new Chart(ctx, {
     type: 'line',
     data: {
       datasets: [
-        // A ヒストグラム (赤)
         {
           label: 'セットA: 相対度数(ヒストグラム)',
           data: distA.histData,
@@ -654,7 +666,6 @@ function onSubmit(e) {
           pointRadius: 0,
           yAxisID: 'y',
         },
-        // A 累積 (赤・少し薄い)
         {
           label: 'セットA: 累積度数',
           data: distA.cumulativeData,
@@ -665,7 +676,6 @@ function onSubmit(e) {
           pointRadius: 0,
           yAxisID: 'y1',
         },
-        // B ヒストグラム (青)
         {
           label: 'セットB: 相対度数(ヒストグラム)',
           data: distB.histData,
@@ -676,7 +686,6 @@ function onSubmit(e) {
           pointRadius: 0,
           yAxisID: 'y',
         },
-        // B 累積 (青・少し薄い)
         {
           label: 'セットB: 累積度数',
           data: distB.cumulativeData,
@@ -692,9 +701,7 @@ function onSubmit(e) {
     options: {
       responsive: true,
       plugins: {
-        legend: {
-          display: true,
-        },
+        legend: { display: true },
       },
       scales: {
         x: {
@@ -727,20 +734,21 @@ function onSubmit(e) {
   });
 }
 
+// ------------------------------------------------------
+//  初期化
+// ------------------------------------------------------
 document.addEventListener('DOMContentLoaded', () => {
   const form = document.getElementById('calc-form');
-  const addBtn = document.getElementById('addSkillRow');
-
-  // ロード
   loadFormData();
 
-  // イベント
   form.addEventListener('submit', onSubmit);
   form.addEventListener('input', saveFormData);
-  addBtn.addEventListener('click', () => {
+
+  document.getElementById('addSkillRow').addEventListener('click', () => {
     addSkillRow();
     saveFormData();
   });
+
   const skillRows = document.querySelectorAll('.delete-row');
   skillRows.forEach((btn) =>
     btn.addEventListener('click', () => deleteSkillRow(btn.closest('tr')))
