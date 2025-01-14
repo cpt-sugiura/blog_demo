@@ -48,24 +48,20 @@
           font-weight: bold;
       }
 
-      .range-table-container {
-        display: flex;
-        gap: 20px;
-      }
-
-      .range-table-container > div {
-        width: 50%;
-      }
-
-      .range-table-container table {
-        width: 100%;
-        border-collapse: collapse;
-        text-align: center;
-      }
-
       label:has(input[type="checkbox"]) {
         display: inline-flex;
         align-items: center;
+      }
+
+      /* 統合テーブルのスタイル */
+      #rangeTableCombined {
+        width: 100%;
+        border-collapse: collapse;
+        text-align: center;
+        margin-top: 1rem;
+      }
+      #rangeTableCombined th {
+        background: #f0f0f0;
       }
   </style>
 </head>
@@ -139,35 +135,20 @@
 <!-- グラフ -->
 <canvas id="timeDiffChart" width="800" height="400"></canvas>
 
-<!-- A/B 2つの累積度数範囲テーブルを横並びで表示 -->
-<div class="range-table-container">
-  <div>
-    <h3>累積度数範囲と最大秒数差分(A)</h3>
-    <table id="rangeTableA" border="1">
-      <thead>
-        <tr>
-          <th>累積度数範囲</th>
-          <th>最大秒数差分</th>
-          <th>距離(Aの最大秒数差 × 終盤速度)</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </div>
-  <div>
-    <h3>累積度数範囲と最大秒数差分(B)</h3>
-    <table id="rangeTableB" border="1">
-      <thead>
-        <tr>
-          <th>累積度数範囲</th>
-          <th>最大秒数差分</th>
-          <th>距離(Bの最大秒数差 × 終盤速度)</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </div>
-</div>
+<!-- A/B で揃えたテーブル -->
+<h3>累積度数範囲ごとの最大秒数差分(A/B)</h3>
+<table id="rangeTableCombined" border="1">
+  <thead>
+    <tr>
+      <th>累積度数範囲</th>
+      <th>最大秒数差分(A)</th>
+      <th>距離(Aの最大秒数差 × 終盤速度)</th>
+      <th>最大秒数差分(B)</th>
+      <th>距離(Bの最大秒数差 × 終盤速度)</th>
+    </tr>
+  </thead>
+  <tbody></tbody>
+</table>
 
 <script>
 /**
@@ -208,7 +189,6 @@ function runNoSkill(courseLength, baseMidSpeed, baseFinalSpeed, baseAccel) {
       distance = courseLength;
       break;
     } else {
-      // 通常ステップ
       distance = nextDist;
       time += dt;
     }
@@ -265,7 +245,7 @@ function runWithSkill(courseLength, baseMidSpeed, baseFinalSpeed, baseAccel, ski
       const nextDist = tmpDist + tmpSpeed * dt;
       tmpTime += dt;
       tmpDist = nextDist;
-      distanceToTimeMap.push({dist: tmpDist, time: tmpTime});
+      distanceToTimeMap.push({ dist: tmpDist, time: tmpTime });
       if (tmpDist >= courseLength) break;
     }
   }
@@ -430,7 +410,7 @@ function loadFormData() {
     document.getElementById('skillRate').value = data.skillRate;
     document.getElementById('trials').value = data.trials;
 
-    // スキルテーブル
+    // スキルテーブルを再構築
     const skillBody = document.getElementById('skillTableBody');
     skillBody.querySelectorAll('tr[data-idx]').forEach((row) => row.remove());
     const addBtnRow = skillBody.querySelector('tr:not([data-idx])');
@@ -560,7 +540,7 @@ function calcDiffDistribution(noSkillTime, trials, courseLength, baseMidSpeed, b
   for (let i = 0; i < binCount; i++) {
     const xVal = minVal + (i + 0.5) * binSize;
     const freq = bins[i] / trials;
-    histData.push({x: xVal, y: freq});
+    histData.push({ x: xVal, y: freq });
   }
 
   // 累積データ
@@ -569,45 +549,55 @@ function calcDiffDistribution(noSkillTime, trials, courseLength, baseMidSpeed, b
   for (let i = 0; i < binCount; i++) {
     cumulativeSum += bins[i] / trials; // 累積度数
     const xVal = minVal + (i + 0.5) * binSize;
-    cumulativeData.push({x: xVal, y: cumulativeSum});
+    cumulativeData.push({ x: xVal, y: cumulativeSum });
   }
 
   return { histData, cumulativeData, diffArray };
 }
 
 /**
- * A/B の rangeTable をクリアして再生成する
+ * A/B を一つのテーブルにまとめて表示
+ *   - 累積度数を 0.0～1.0 を 0.1 刻み (10 区間) で見て、
+ *     その区間に含まれる秒数差 (x) の最大値を求め、テーブルに出力
  */
-function buildRangeTable(rangeData, tableElemId, baseFinalSpeed) {
-  const tableBody = document.querySelector(tableElemId + ' tbody');
-  tableBody.querySelectorAll('.range-row').forEach(row => row.remove());
+function buildCombinedRangeTable(distA, distB, baseFinalSpeed) {
+  const tableBody = document.querySelector('#rangeTableCombined tbody');
+  tableBody.innerHTML = ''; // いったんクリア
 
-  const { bins, trials, cumulativeData } = rangeData;
+  // 0.0～1.0 を 0.1 刻みでループ
+  for (let i = 0; i < 10; i++) {
+    const rangeStart = i / 10;
+    const rangeEnd = (i + 1) / 10;
 
-  // 累積度数 0.1刻みで行を作成
-  let prevCumulative = 0;
-  let rangeStart = 0;
-  for (let i = 0; i < cumulativeData.length; i++) {
-    const point = cumulativeData[i];
-    const currentCumulative = Math.floor(point.y * 10) / 10; // 0.1刻み
+    // A/B それぞれで、この累積度数範囲に入っている x(=差分秒) の最大値を求める
+    const maxA = getMaxDiffInRange(distA.cumulativeData, rangeStart, rangeEnd);
+    const maxB = getMaxDiffInRange(distB.cumulativeData, rangeStart, rangeEnd);
 
-    if (currentCumulative > prevCumulative) {
-      // この範囲([prevCumulative, currentCumulative)の最大秒数差
-      const rangeMax = cumulativeData.slice(rangeStart, i + 1)
-        .reduce((max, p) => Math.max(max, p.x), 0);
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td>${rangeStart.toFixed(1)} - ${rangeEnd.toFixed(1)}</td>
+      <td>${maxA.toFixed(2)}</td>
+      <td>${(maxA * baseFinalSpeed).toFixed(2)}</td>
+      <td>${maxB.toFixed(2)}</td>
+      <td>${(maxB * baseFinalSpeed).toFixed(2)}</td>
+    `;
+    tableBody.appendChild(row);
+  }
 
-      const row = document.createElement('tr');
-      row.className = 'range-row';
-      row.innerHTML = `
-        <td>${prevCumulative.toFixed(1)} - ${currentCumulative.toFixed(1)}</td>
-        <td>${rangeMax.toFixed(2)}</td>
-        <td>${(rangeMax * baseFinalSpeed).toFixed(2)}</td>
-      `;
-      tableBody.appendChild(row);
-
-      rangeStart = i;
-      prevCumulative = currentCumulative;
-    }
+  /**
+   * cumulativeData の中から、累積度数 (y) が [rangeStart, rangeEnd) に入る
+   * x(=秒数差) の最大値を返す
+   */
+  function getMaxDiffInRange(cumulativeData, rangeStart, rangeEnd) {
+    let maxVal = 0;
+    cumulativeData.forEach(({ x, y }) => {
+      if (y >= rangeStart && y < rangeEnd) {
+        if (x > maxVal) {
+          maxVal = x;
+        }
+      }
+    });
+    return maxVal;
   }
 }
 
@@ -640,20 +630,10 @@ function onSubmit(e) {
   const distA = calcDiffDistribution(noSkillTime, trials, courseLength, baseMidSpeed, baseFinalSpeed, baseAccel, skillRate, skillsA);
   const distB = calcDiffDistribution(noSkillTime, trials, courseLength, baseMidSpeed, baseFinalSpeed, baseAccel, skillRate, skillsB);
 
-  // テーブルを更新
-  buildRangeTable({
-    bins: null,
-    trials,
-    cumulativeData: distA.cumulativeData,
-  }, '#rangeTableA', baseFinalSpeed);
+  // A/B を行をそろえて一つのテーブルにまとめる
+  buildCombinedRangeTable(distA, distB, baseFinalSpeed);
 
-  buildRangeTable({
-    bins: null,
-    trials,
-    cumulativeData: distB.cumulativeData,
-  }, '#rangeTableB', baseFinalSpeed);
-
-  // Chart.js 描画
+  // Chart.js 描画 (ヒストグラム & 累積)
   if (chartInstance) {
     chartInstance.destroy();
   }
