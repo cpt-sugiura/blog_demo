@@ -49,19 +49,20 @@
       }
 
       label:has(input[type="checkbox"]) {
-        display: inline-flex;
-        align-items: center;
+          display: inline-flex;
+          align-items: center;
       }
 
       /* 統合テーブルのスタイル */
       #rangeTableCombined {
-        width: 100%;
-        border-collapse: collapse;
-        text-align: center;
-        margin-top: 1rem;
+          width: 100%;
+          border-collapse: collapse;
+          text-align: center;
+          margin-top: 1rem;
       }
+
       #rangeTableCombined th {
-        background: #f0f0f0;
+          background: #f0f0f0;
       }
   </style>
 </head>
@@ -161,7 +162,7 @@
  * これを runWithSkill でも使い回して、
  * 「距離○m に到達する時刻」 を高速に求める。
  */
-function createDistanceToTimeMap(courseLength, baseMidSpeed, baseFinalSpeed, baseAccel, dt = 1/60) {
+function createDistanceToTimeMap(courseLength, baseMidSpeed, baseFinalSpeed, baseAccel, dt = 1 / 60) {
   const distanceToTimeMap = [];
   let tmpTime = 0;
   let tmpDist = 0;
@@ -180,7 +181,7 @@ function createDistanceToTimeMap(courseLength, baseMidSpeed, baseFinalSpeed, bas
     const nextDist = tmpDist + tmpSpeed * dt;
     tmpTime += dt;
     tmpDist = nextDist;
-    distanceToTimeMap.push({ dist: tmpDist, time: tmpTime });
+    distanceToTimeMap.push({dist: tmpDist, time: tmpTime});
     if (tmpDist >= courseLength) break;
   }
 
@@ -220,7 +221,7 @@ function getTimeByDistance(distanceToTimeMap, d) {
  *  - ゴール手前は部分的に dt を調整して離散化の影響を減らす
  *  - これは 1 回計算しておけばよい
  */
-function runNoSkill(courseLength, baseMidSpeed, baseFinalSpeed, baseAccel, dt = 1/60) {
+function runNoSkill(courseLength, baseMidSpeed, baseFinalSpeed, baseAccel, dt = 1 / 60) {
   let time = 0;
   let distance = 0;
   let currentSpeed = 0;
@@ -265,7 +266,7 @@ function runWithSkill(
   skillRate,
   skills,
   distanceToTimeMap, // 使い回し用マップを外部から受け取る
-  dt = 1/60
+  dt = 1 / 60
 ) {
   // どのスキルが発動するか判定
   // 発動位置(距離)をランダムに決め、開始時刻を distanceToTimeMap で高速取得
@@ -546,7 +547,7 @@ function calcDiffDistribution(
   for (let i = 0; i < binCount; i++) {
     const xVal = minVal + (i + 0.5) * binSize;
     const freq = bins[i] / trials;
-    histData.push({ x: xVal, y: freq });
+    histData.push({x: xVal, y: freq});
   }
 
   // 累積度数
@@ -555,10 +556,10 @@ function calcDiffDistribution(
   for (let i = 0; i < binCount; i++) {
     cumulativeSum += bins[i] / trials;
     const xVal = minVal + (i + 0.5) * binSize;
-    cumulativeData.push({ x: xVal, y: cumulativeSum });
+    cumulativeData.push({x: xVal, y: cumulativeSum});
   }
 
-  return { histData, cumulativeData, diffArray };
+  return {histData, cumulativeData, diffArray};
 }
 
 // ------------------------------------------------------
@@ -589,7 +590,7 @@ function buildCombinedRangeTable(distA, distB, baseFinalSpeed) {
   function getMaxDiffInRange(cumulativeData, rangeStart, rangeEnd) {
     let maxVal = 0;
     for (let i = 0; i < cumulativeData.length; i++) {
-      const { x, y } = cumulativeData[i];
+      const {x, y} = cumulativeData[i];
       if (y >= rangeStart && y < rangeEnd) {
         if (x > maxVal) {
           maxVal = x;
@@ -620,7 +621,7 @@ function onSubmit(e) {
   } = getFormData();
 
   // dtは必要に応じて変更可能 (1/60 より荒くすると計算は速くなる)
-  const dt = 1/60;
+  const dt = 1 / 60;
 
   // 1) スキルなしの時刻テーブル & 走破タイムを一度だけ計算
   const distanceToTimeMap = createDistanceToTimeMap(courseLength, baseMidSpeed, baseFinalSpeed, baseAccel, dt);
@@ -701,7 +702,7 @@ function onSubmit(e) {
     options: {
       responsive: true,
       plugins: {
-        legend: { display: true },
+        legend: {display: true},
       },
       scales: {
         x: {
@@ -754,6 +755,24 @@ document.addEventListener('DOMContentLoaded', () => {
     btn.addEventListener('click', () => deleteSkillRow(btn.closest('tr')))
   );
 });
+
+
+function stat2spd(spd, guts, type, courseLength) {
+  const baseSpd = 22 - courseLength / 1000;
+  const rateMap = {
+    0: [1.063, 0.962, 0.950],
+    1: [1.000, 0.980, 0.962],
+    2: [0.978, 0.991, 0.975],
+    3: [0.938, 0.998, 0.994],
+    4: [0.931, 1.000, 1.000],
+  };
+  const vSpd = Math.sqrt(500 * spd) * 1.05 * 0.002;
+  const gSpd = 0.00384 * Math.pow(guts, 0.597);
+  return {
+    midSpeed: baseSpd * rateMap[type][1],
+    finalSpeed: baseSpd * (rateMap[type][2] + 0.01) * 1.05 + vSpd * 2.05 + gSpd
+  };
+}
 </script>
 </body>
 </html>
