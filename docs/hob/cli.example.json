@@ -1,0 +1,11 @@
+{
+  "courseLength": 1200,
+  "baseMidSpeed": 20.6128,
+  "baseFinalSpeed": 25.4742,
+  "baseAccel": 0.51,
+  "skillRate": 0.93,
+  "trials": 10000,
+  "skills": [
+    {      "start": 800,      "end": 800,      "baseDuration": 2.4,      "topSpeedBonus": 0,      "accelBonus": 0.2,  "currentSpeedBonus": 0   }
+  ]
+}
