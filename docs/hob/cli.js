@@ -178,16 +178,16 @@ function compareSimulations(files, percentiles) {
   const results = files.map(file => {
     const inputData = JSON.parse(fs.readFileSync(file, 'utf-8'));
     const simulationResults = simulate(inputData, percentiles);
-    return { file, simulationResults };
+    return { file, simulationResults, memo: inputData.memo ?? '' };
   });
 
   // 結果を表示
   console.log('\n=== シミュレーション結果 ===');
-  console.log(' file_name           | ' + percentiles.map(p => `${p}%`.padStart(6)).join(' | '));
+  console.log(' file_name           | ' + percentiles.map(p => `${p}%`.padStart(6)).join(' | ') + ' | memo');
   console.log('----------------------------------------------');
-  results.forEach(({ file, simulationResults }) => {
+  results.forEach(({ file, simulationResults, memo }) => {
     const values = simulationResults.map(({ value }) => value.toFixed(3).padStart(6));
-    console.log(`${file.padEnd(20)} | ${values.join(' | ')}`);
+    console.log(`${file.padEnd(20)} | ${values.join(' | ')} | ${memo}`);
   });
   console.log('==============================================\n');
 }
