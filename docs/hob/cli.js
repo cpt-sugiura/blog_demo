@@ -203,3 +203,5 @@ if (inputFiles.length === 0) {
 
 const percentiles = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]; // 見たいパーセンタイル
 compareSimulations(inputFiles, percentiles);
+
+// Object { midSpeed: 20.4, finalSpeed: 25.76288131131566
