@@ -1,10 +1,10 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-// import QueryBuilderDemo from "./QueryBuilderCustomElementDemo.tsx";
-import QueryBuilderDemo from "./QueryBuilderDemo.tsx";
+// import QueryBuilderCustomElementDemo from "./QueryBuilderCustomElementDemo.tsx";
+import QueryBuilderCustomElementDemo from "./QueryBuilderDemo.tsx";
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <QueryBuilderDemo  />
+    <QueryBuilderCustomElementDemo  />
   </StrictMode>,
 )

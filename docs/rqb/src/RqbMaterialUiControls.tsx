@@ -1,6 +1,14 @@
 import {Button, IconButton, MenuItem, Select, TextField} from "@mui/material";
 import {Delete} from "@mui/icons-material";
-import {ActionWithRulesAndAddersProps, CombinatorSelectorProps, FieldSelectorProps, OperatorSelectorProps, ValueEditorProps} from "react-querybuilder";
+import {
+  ActionWithRulesAndAddersProps,
+  CombinatorSelectorProps,
+  FieldSelectorProps,
+  OperatorSelectorProps,
+  ValueEditorProps,
+  ControlElementsProp,
+  FullField
+} from "react-querybuilder";
 
 // フィールド選択
 const FieldSelector = ({options, value, handleOnChange}: FieldSelectorProps) => (
@@ -115,7 +123,8 @@ const RemoveGroupAction = ({handleOnClick}: ActionWithRulesAndAddersProps) => (
 );
 
 // まとめてエクスポート
-export const rqbMaterialUiControlElements = {
+export const rqbMaterialUiControlElements: ControlElementsProp<FullField, string> = {
+
   fieldSelector: FieldSelector,
   operatorSelector: OperatorSelector,
   valueEditor: ValueEditor,
